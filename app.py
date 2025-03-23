@@ -115,10 +115,9 @@ device_detection_js = """
 
 st.markdown(device_detection_js, unsafe_allow_html=True)
 
-# URLクエリパラメータからモバイル検出結果を取得
-query_params = st.query_params
-if 'mobile_detected' in query_params:
-    st.session_state.is_mobile = query_params['mobile_detected'][0] == 'true'
+# モバイルデバイスの検出をセッションステートで管理
+if 'is_mobile' not in st.session_state:
+    st.session_state.is_mobile = False
 
 # 画面幅の検出
 def is_mobile_device():
@@ -589,33 +588,19 @@ try:
         try:
             import matplotlib
             
-            # japanize_matplotlibが利用可能な場合はそれを使用
-            if JAPANIZE_AVAILABLE:
-                import japanize_matplotlib
-                # MacOSの場合、追加でシステムフォントも設定
-                if platform.system() == 'Darwin':
-                    plt.rcParams['font.sans-serif'] = ['AppleGothic', 'Hiragino Sans GB', 'IPAexGothic']
-                    plt.rcParams['font.family'] = 'sans-serif'
-            else:
-                # 日本語フォントをシステムから探す
-                if platform.system() == 'Darwin':  # macOS
-                    matplotlib.rc('font', family='AppleGothic')
-                    plt.rcParams['font.sans-serif'] = ['AppleGothic', 'Hiragino Sans GB', 'Hiragino Maru Gothic Pro', 'Osaka']
-                elif platform.system() == 'Windows':
-                    matplotlib.rc('font', family='MS Gothic')
-                    plt.rcParams['font.sans-serif'] = ['MS Gothic', 'Yu Gothic', 'Meiryo']
-                else:  # Linux
-                    matplotlib.rc('font', family='IPAGothic')
-                    plt.rcParams['font.sans-serif'] = ['IPAGothic', 'TakaoGothic', 'Noto Sans CJK JP']
-                    
+            # フォントの設定
+            if platform.system() == 'Darwin':  # macOS
+                matplotlib.rc('font', family='AppleGothic')
+            elif platform.system() == 'Windows':
+                matplotlib.rc('font', family='MS Gothic')
+            else:  # Linux
+                matplotlib.rc('font', family='IPAGothic')
+            
             # 文字化け防止のための追加設定
-            plt.rcParams['axes.unicode_minus'] = False  # マイナス記号の文字化け防止
-            # フォントマネージャーのキャッシュをクリア
-            matplotlib.font_manager._rebuild()
-        
+            plt.rcParams['axes.unicode_minus'] = False
+            
         except Exception as e:
             print(f"フォント設定エラー: {e}")
-            st.warning(f"日本語フォント設定に失敗しました: {e}")
             # エラーが発生しても処理を継続
 
     # 複数日予測の結果をグラフ表示
@@ -879,14 +864,20 @@ try:
                 
                 save_col1, save_col2 = st.columns([3, 1])
                 with save_col1:
-                    st.markdown("**この予測結果をデータとして保存しますか？**")
-                    st.caption("保存すると、将来の予測精度向上に役立ちます。入力した前日外来患者数などのデータと実際の入院患者数が機械学習モデルの再学習に使用されます。実際の入院患者数が分かった後に入力してください。")
+                    st.markdown("""
+                    **1日1回の正確なデータ保存**
+                    
+                    - 予測した日の実際の入院患者数を記録します
+                    - 1日1回のみ保存可能です
+                    - 正確な実数を入力してください
+                    - 保存したデータは予測精度向上に使用されます
+                    """)
                 
                 with save_col2:
-                    if st.button("予測結果を保存", key="save_prediction", type="primary", use_container_width=True):
+                    if st.button("実数データを保存", key="save_prediction", type="primary", use_container_width=True):
                         # 実際の入院患者数をユーザーに入力してもらう
                         real_admission = st.number_input(
-                            "実際の入院患者数を入力してください",
+                            "実際の入院患者数（小数点以下も正確に入力）",
                             min_value=0.0,
                             max_value=1000.0,
                             value=float(prediction),
@@ -904,7 +895,12 @@ try:
                             )
                             
                             if success:
-                                st.success(message)
+                                st.success("""
+                                ✅ データを保存しました
+                                
+                                - 保存日時: {datetime.now().strftime('%Y年%m月%d日 %H:%M')}
+                                - 保存データ: {real_admission:.1f}人
+                                """)
                                 # データの再読み込みを強制
                                 st.cache_data.clear()
                                 # セッションからデータをクリア
@@ -1387,10 +1383,6 @@ try:
         
         # 予測値のリストから統計量を計算
         prediction_values = [data["予測入院患者数"] for data in predictions.values()]
-        min_value = min(prediction_values)
-        max_value = max(prediction_values)
-        
-        # 4段階の混雑度に分ける
         quartiles = np.percentile(prediction_values, [25, 50, 75])
         
         # 各日付のセルの色を決定する関数
@@ -1435,7 +1427,7 @@ try:
         ax.grid(True, color='#cccccc', linestyle='-', linewidth=0.5)
         
         # タイトルの設定
-        month_name = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '10月', '11月', '12月'][month - 1]
+        month_name = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'][month - 1]
         ax.set_title(f"{year}年 {month_name} 入院患者数予測", fontsize=16, pad=20, fontweight='bold')
         
         # カレンダーの日付とデータを配置
@@ -1443,9 +1435,8 @@ try:
             current_date = date_type(year, month, day)
             
             # カレンダー上の位置を計算
-            # 月曜日を0、日曜日を6として計算
-            weekday = (current_date.weekday() + 7) % 7  # 月曜日が0、日曜日が6
-            week = (day + first_day - 1) // 7  # 何週目か
+            weekday = (current_date.weekday() + 7) % 7
+            week = (day + first_day - 1) // 7
             
             # first_day調整（月曜日を0とする）
             adjusted_weekday = (current_date.weekday()) % 7
@@ -1462,7 +1453,7 @@ try:
             # セルの背景色
             cell_color = get_cell_color(value)
             
-            # 日付と予測値の表示
+            # セルの描画
             rect = plt.Rectangle((x, y), 1, 1, facecolor=cell_color, alpha=0.7, edgecolor='black', linewidth=1)
             ax.add_patch(rect)
             
@@ -1479,14 +1470,9 @@ try:
             # 日付の表示
             ax.text(x + 0.05, y + 0.75, f"{day}", fontsize=12, fontweight='bold', color=date_color)
             
-            # 混雑度の表示
+            # 混雑度の表示（中央に配置）
             busyness_level = get_busyness_level(value)
-            ax.text(x + 0.5, y + 0.4, busyness_level, fontsize=10, ha='center', fontweight='bold')
-            
-            # 入院患者数の表示
-            # 小数点以下を切り捨てて整数で表示
-            patient_count = int(value)
-            ax.text(x + 0.5, y + 0.2, f"{patient_count}人", fontsize=8, ha='center')
+            ax.text(x + 0.5, y + 0.3, busyness_level, fontsize=10, ha='center', fontweight='bold')
         
         # 凡例の追加
         legend_labels = ["少ない", "やや少ない", "やや多い", "多い"]
