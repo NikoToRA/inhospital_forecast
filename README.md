@@ -1,84 +1,75 @@
-# 入院患者数予測システム
+# BED: Bed Entry and Discharge Predictor
 
-病院の入院患者数を予測するためのStreamlitウェブアプリケーションです。日々の外来患者数や救急患者数などに基づいて、将来の入院患者数を予測します。
+入院患者数予測システム
 
-## 特徴
+## 機能
 
-- **単一日予測**: 特定の日付の入院患者数を予測
-- **週間予測**: 1週間先までの入院患者数を予測
-- **月間混雑予想**: 1ヶ月間の入院患者数予測をカレンダー形式で表示
-- **複数シナリオ比較**: 異なる条件下での入院患者数を比較
-- **データ分析**: 既存データの傾向と分析を可視化
-- **日本の祝日対応**: 日本の祝日を自動判定し予測に反映
-- **モバイル対応**: スマートフォンやタブレットに最適化された表示
-- **データ蓄積機能**: ユーザーの入力を保存し、予測精度を向上
+- 単一予測：特定の日の入院患者数を予測
+- 月間カレンダー：一ヶ月分の入院患者数予測をカレンダー表示
+- シナリオ比較：複数の条件で入院患者数を予測し比較
+- データ分析：過去データの分析と可視化
 
-## デモ
+## セットアップ
 
-<デモアプリのURLを追加する場合はここに記述>
-
-## インストール方法
-
-1. リポジトリをクローン:
-```bash
-git clone https://github.com/yourusername/inhospital_forecast.git
-cd inhospital_forecast
-```
-
-2. 依存パッケージをインストール:
+1. 必要なパッケージのインストール:
 ```bash
 pip install -r requirements.txt
 ```
 
-## 使用方法
-
-アプリケーションを起動:
-```bash
-python launch_app.py
+2. 環境変数の設定:
+- `.env`ファイルを作成し、以下の情報を設定:
+```
+AZURE_STORAGE_CONNECTION_STRING=your_connection_string_here
+AZURE_STORAGE_CONTAINER_NAME=hospital-data
 ```
 
-または:
+3. アプリケーションの起動:
 ```bash
 streamlit run app.py
 ```
 
-ブラウザで http://localhost:8501 にアクセスしてアプリケーションを使用できます。
+## Azure Web Appへのデプロイ
 
-## データについて
+1. Azure CLIのインストールとログイン:
+```bash
+# Azure CLIのインストール
+brew install azure-cli
 
-モデルは RandomForest を使用し、以下の特徴量に基づいて予測を行います:
-- 曜日（月〜日）
-- 祝日フラグ
-- 前日が祝日かどうかのフラグ
-- 総外来患者数
-- 紹介外来患者数
-- 救急患者数
-- ベッド数
+# Azureへのログイン
+az login
+```
 
-## データ蓄積による精度向上
+2. Azure Web Appの作成:
+```bash
+# リソースグループの作成
+az group create --name bed-predictor-rg --location japaneast
 
-本システムは、ユーザーが入力したデータを蓄積し、将来の予測精度を向上させる機能を備えています。
+# App Serviceプランの作成
+az appservice plan create --name bed-predictor-plan --resource-group bed-predictor-rg --sku B1 --is-linux
 
-1. 「予測」タブで予測を実行した後、「予測結果を保存」ボタンをクリックします。
-2. 実際の入院患者数を入力して「確定して保存」を押します。
-3. 入力されたデータは学習用CSVファイルに追加され、将来の予測に活用されます。
+# Web Appの作成
+az webapp create --resource-group bed-predictor-rg --plan bed-predictor-plan --name bed-predictor --runtime "PYTHON:3.9"
+```
 
-データを蓄積するほど、お使いの病院の特性に合わせた予測精度が向上します。
+3. 環境変数の設定:
+```bash
+az webapp config appsettings set --name bed-predictor --resource-group bed-predictor-rg --settings \
+  AZURE_STORAGE_CONNECTION_STRING="your_connection_string_here" \
+  AZURE_STORAGE_CONTAINER_NAME="hospital-data"
+```
 
-## モバイル対応について
+4. デプロイ:
+```bash
+# GitHubからのデプロイ
+az webapp deployment source config --name bed-predictor --resource-group bed-predictor-rg --repo-url "your_github_repo_url" --branch main
+```
 
-スマートフォンやタブレットで使用する場合は、サイドバーの「モバイル画面に最適化」チェックボックスをオンにすることで、モバイルデバイスに適した表示に切り替わります。
+## 注意事項
 
-## デプロイ方法
-
-Streamlit Cloudを使用してデプロイする:
-
-1. GitHubにリポジトリをプッシュ
-2. [Streamlit Cloud](https://streamlit.io/cloud) にアクセス
-3. GitHubアカウントと連携し、リポジトリを選択
-4. メイン・ファイルとして `app.py` を指定
-5. デプロイボタンをクリック
+- 本アプリケーションは予測モデルを使用しており、実際の入院患者数とは異なる場合があります
+- データの更新は1日1回のみ可能です
+- 予測精度を向上させるため、実際の入院患者数を記録することを推奨します
 
 ## ライセンス
 
-このプロジェクトは MIT ライセンスの下で公開されています。 
+MIT License 
