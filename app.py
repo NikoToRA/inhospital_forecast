@@ -24,14 +24,14 @@ except ImportError:
 # 日本語フォントの設定
 import matplotlib
 if platform.system() == 'Darwin':  # macOS
-    matplotlib.rc('font', family='AppleGothic')
+    matplotlib.rc('font', family='Hiragino Sans')
 elif platform.system() == 'Windows':
     matplotlib.rc('font', family='MS Gothic')
 else:  # Linux
     matplotlib.rc('font', family='IPAGothic')
 
 # フォントのフォールバックを設定
-plt.rcParams['font.sans-serif'] = ['AppleGothic', 'Hiragino Sans GB', 'Hiragino Maru Gothic Pro', 
+plt.rcParams['font.sans-serif'] = ['Hiragino Sans', 'Hiragino Sans GB', 'Hiragino Maru Gothic Pro', 
                                    'MS Gothic', 'Yu Gothic', 'IPAPGothic', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -348,60 +348,33 @@ try:
     # モデルを修正して保存する関数
     def fix_model_compatibility():
         try:
-            # 元のモデルを読み込む
-            # 情報メッセージを表示しない
             model = joblib.load('fixed_rf_model.joblib')
-            # 成功メッセージを表示しない
-            
-            # モデルの内部構造を修正
-            # monotonic_cst属性が欠落しているため、追加する
-            for estimator in model.estimators_:
-                if not hasattr(estimator, 'monotonic_cst'):
-                    estimator.monotonic_cst = None
-            
-            # 修正したモデルを保存
-            joblib.dump(model, 'fixed_rf_model.joblib')
-            # 成功メッセージを表示しない
-            return True
+            return model
         except Exception as e:
-            st.error(f"モデルの修正に失敗しました: {e}")
-            return False
+            st.error(f"モデルの読み込みに失敗しました: {str(e)}")
+            return None
 
     # モデルを読み込む関数
     @st.cache_resource
     def load_model():
         try:
-            # モデルの互換性を修正
-            fix_success = fix_model_compatibility()
-            
-            if fix_success and os.path.exists('fixed_rf_model.joblib'):
-                # 修正したモデルを読み込む
-                model = joblib.load('fixed_rf_model.joblib')
-                # 成功メッセージを表示しない
-            else:
-                # 元のモデルを読み込む
-                model = joblib.load('fixed_rf_model.joblib')
-                # 成功メッセージを表示しない
+            model = fix_model_compatibility()
+            if model is None:
+                st.error("モデルの読み込みに失敗しました。")
+                return None
             return model
         except Exception as e:
-            st.error(f"モデルの読み込みに失敗しました: {e}")
-            # ダミーモデルを作成
-            class DummyModel:
-                def predict(self, X):
-                    return np.zeros(len(X))
-            return DummyModel()
+            st.error(f"モデルの読み込み中にエラーが発生しました: {str(e)}")
+            return None
 
     # CSVデータを読み込む関数
     @st.cache_data
     def load_data():
         try:
-            # CSVファイルを読み込む
             df = pd.read_csv('ultimate_pickup_data.csv')
-            # NaN値を含む行を削除
-            df = df.dropna()
             return df
         except Exception as e:
-            st.error(f"CSVファイルの読み込みに失敗しました: {e}")
+            st.error(f"データの読み込みに失敗しました: {str(e)}")
             return None
     
     # ユーザーデータをCSVに追加する関数（キャッシュなし）
@@ -727,9 +700,13 @@ try:
         - アプリケーションを再起動してください
         """)
         
-        # モデルとデータを読み込む
+        # モデルとデータの読み込み
         model = load_model()
         df = load_data()
+        
+        if model is None or df is None:
+            st.error("アプリケーションの初期化に失敗しました。必要なファイルが存在することを確認してください。")
+            return
         
         # タブを作成（ラベル名を簡潔に統一）
         tab1, tab2, tab3, tab4 = st.tabs(["単一予測", "月間カレンダー", "シナリオ比較", "データ分析"])
