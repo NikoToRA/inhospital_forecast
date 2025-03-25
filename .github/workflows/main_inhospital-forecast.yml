@@ -51,7 +51,10 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -62,10 +65,17 @@ jobs:
         run: unzip release.zip
 
       
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7E602DA7ACEE4758BB76EF9E341A0F6F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5D1091DB906941E8AE39ED5CA9E9F818 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BA37AC046D514DB89330FC16111498CB }}
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'inhospital-forecast'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_0166ED6E6749450B9EF095F0B6FF6660 }}
+          
