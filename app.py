@@ -29,6 +29,15 @@ if not hospital_list:
     data_manager.update_hospital_list([initial_hospital])
     hospital_list = [initial_hospital]
 
+# Streamlitアプリケーションの設定
+st.set_page_config(
+    page_title="BED: Bed Entry and Discharge Predictor",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# アプリケーションのメイン関数
 def main():
     # アプリ名を表示（カスタムスタイル適用）
     st.markdown("""
@@ -121,6 +130,9 @@ def main():
     
     # 以下、既存のタブ処理コード
     # ... (既存のコードをそのまま使用)
+
+# アプリケーションのエントリーポイント
+app = main
 
 if __name__ == "__main__":
     main()
