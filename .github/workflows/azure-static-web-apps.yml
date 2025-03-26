@@ -88,8 +88,14 @@ jobs:
             }
           }' > api/host.json
 
-          # Create .python_packages directory
-          mkdir -p api/.python_packages
+          # Optimize package installation
+          cd api
+          pip install --no-cache-dir --no-deps -r requirements.txt
+          pip install --no-cache-dir azure-functions
+          # Remove unnecessary files
+          find . -type d -name "__pycache__" -exec rm -r {} +
+          find . -type d -name "*.dist-info" -exec rm -r {} +
+          find . -type d -name "*.egg-info" -exec rm -r {} +
 
       - name: Build And Deploy
         id: builddeploy
@@ -101,7 +107,7 @@ jobs:
           app_location: "frontend/build"
           api_location: "api"
           output_location: "."
-          api_build_command: "python -m pip install --upgrade pip && python -m pip install -r requirements.txt"
+          api_build_command: "pip install --no-cache-dir --no-deps -r requirements.txt && pip install --no-cache-dir azure-functions"
           app_artifact_location: "build"
 
   close_pull_request_job:
