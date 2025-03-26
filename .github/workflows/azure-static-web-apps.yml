@@ -32,20 +32,21 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
       
-      # フロントエンドの静的ファイル作成（シンプル化）
-      - name: Create simple frontend
+      # フロントエンドのビルド
+      - name: Build frontend
         run: |
-          mkdir -p frontend/build
-          echo '<!DOCTYPE html><html><head><title>InHospital Forecast</title></head><body><h1>InHospital Forecast API</h1><p>API endpoints available at:</p><ul><li><a href="/api/DataFunction">/api/DataFunction</a></li><li><a href="/api/PredictFunction">/api/PredictFunction</a></li></ul></body></html>' > frontend/build/index.html
-          ls -la frontend/build
+          mkdir -p frontend/.output
+          cd frontend
+          echo '<!DOCTYPE html><html><head><title>InHospital Forecast</title></head><body><h1>InHospital Forecast API</h1><p>API endpoints available at:</p><ul><li><a href="/api/DataFunction">/api/DataFunction</a></li><li><a href="/api/PredictFunction">/api/PredictFunction</a></li></ul></body></html>' > .output/index.html
+          cd ..
       
       # デバッグ情報
       - name: Debug environment
         run: |
           echo "Current directory structure:"
           find . -type d -not -path "*/\.*" | sort
-          echo "Secret availability check:"
-          if [ -n "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then echo "Token is set"; else echo "Token is NOT set"; fi
+          echo "Content of frontend/.output:"
+          ls -la frontend/.output
       
       # Static Web Appsへのデプロイ
       - name: Build And Deploy
@@ -57,7 +58,7 @@ jobs:
           action: "upload"
           app_location: "frontend"
           api_location: "api"
-          output_location: "build"
+          output_location: ".output"
           skip_app_build: true
 
   close_pull_request_job:
