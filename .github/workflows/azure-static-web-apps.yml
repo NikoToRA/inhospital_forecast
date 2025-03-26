@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.8'
           cache: 'pip'
 
       - name: Install dependencies
@@ -88,6 +88,9 @@ jobs:
             }
           }' > api/host.json
 
+          # Create .python_packages directory
+          mkdir -p api/.python_packages
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -98,7 +101,7 @@ jobs:
           app_location: "frontend/build"
           api_location: "api"
           output_location: "."
-          api_build_command: "python -m pip install -r requirements.txt"
+          api_build_command: "python -m pip install --upgrade pip && python -m pip install -r requirements.txt"
           app_artifact_location: "build"
 
   close_pull_request_job:
