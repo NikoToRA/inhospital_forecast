@@ -24,91 +24,35 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.8'
-          cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: |
+          cd frontend
           python -m pip install --upgrade pip
-          pip install -r frontend/requirements.txt
-          pip install -r api/requirements.txt
+          pip install -r requirements.txt
 
-      - name: Prepare static content
+      - name: Build frontend
         run: |
-          mkdir -p frontend/build
-          echo '<!DOCTYPE html>
-          <html>
-          <head>
-              <title>InHospital Forecast</title>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1">
-              <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-          </head>
-          <body>
-              <div class="container py-4">
-                  <h1>InHospital Forecast API</h1>
-                  <p>Available API endpoints:</p>
-                  <ul>
-                      <li><a href="/api/DataFunction">/api/DataFunction</a></li>
-                      <li><a href="/api/PredictFunction">/api/PredictFunction</a></li>
-                  </ul>
-              </div>
-          </body>
-          </html>' > frontend/build/index.html
+          cd frontend
+          mkdir -p .output
+          streamlit build . --output-dir .output
 
-      - name: Prepare API
+      - name: Install API dependencies
         run: |
-          # Create function.json files if they don't exist
-          for func in DataFunction PredictFunction; do
-            if [ ! -f "api/$func/function.json" ]; then
-              echo '{
-                "bindings": [
-                  {
-                    "authLevel": "anonymous",
-                    "type": "httpTrigger",
-                    "direction": "in",
-                    "name": "req",
-                    "methods": ["get", "post"]
-                  },
-                  {
-                    "type": "http",
-                    "direction": "out",
-                    "name": "$return"
-                  }
-                ]
-              }' > "api/$func/function.json"
-            fi
-          done
-
-          # Create or update host.json
-          echo '{
-            "version": "2.0",
-            "extensionBundle": {
-              "id": "Microsoft.Azure.Functions.ExtensionBundle",
-              "version": "[2.*, 3.0.0)"
-            }
-          }' > api/host.json
-
-          # Optimize package installation
           cd api
-          pip install --no-cache-dir --no-deps -r requirements.txt
-          pip install --no-cache-dir azure-functions
-          # Remove unnecessary files
-          find . -type d -name "__pycache__" -exec rm -r {} +
-          find . -type d -name "*.dist-info" -exec rm -r {} +
-          find . -type d -name "*.egg-info" -exec rm -r {} +
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Build And Deploy
-        id: builddeploy
+      - name: Deploy to Azure Static Web Apps
+        id: deploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "frontend/build"
+          app_location: "frontend"
+          output_location: ".output"
           api_location: "api"
-          output_location: "."
-          api_build_command: "pip install --no-cache-dir --no-deps -r requirements.txt && pip install --no-cache-dir azure-functions"
-          app_artifact_location: "build"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -120,5 +64,4 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: "close"
-          app_location: "frontend/build" 
+          action: "close" 
