@@ -32,11 +32,12 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
 
-      - name: Create static content
+      - name: Prepare build directory
         run: |
+          # Create build directory
           mkdir -p frontend/build
-          cat > frontend/build/index.html << 'EOL'
-          <!DOCTYPE html>
+          # Create static content
+          echo '<!DOCTYPE html>
           <html>
           <head>
               <title>InHospital Forecast</title>
@@ -54,8 +55,9 @@ jobs:
                   </ul>
               </div>
           </body>
-          </html>
-          EOL
+          </html>' > frontend/build/index.html
+          # Debug: List contents
+          ls -la frontend/build/
 
       - name: Build And Deploy
         id: builddeploy
@@ -66,8 +68,8 @@ jobs:
           action: "upload"
           app_location: "frontend/build"
           api_location: "api"
-          output_location: ""
-          skip_app_build: true
+          output_location: "."
+          skip_api_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
