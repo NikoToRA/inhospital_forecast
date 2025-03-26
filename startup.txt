@@ -1,1 +1,1 @@
-gunicorn --bind=0.0.0.0:8501 --timeout 600 --workers 4 --threads 2 --worker-class=gthread --log-level=info --access-logfile=- --error-logfile=- --capture-output --enable-stdio-inheritance app:app 
+streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.maxUploadSize 200 --server.enableXsrfProtection true --server.enableCORS false 
