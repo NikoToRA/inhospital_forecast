@@ -1,16 +1,13 @@
 {
   "routes": [
     {
-      "route": "/api/DataFunction",
+      "route": "/api/streamlit",
       "allowedRoles": ["anonymous"],
-      "methods": ["GET"],
-      "backendUri": "%BACKEND_URL%/api/DataFunction"
+      "serve": "/api/streamlit"
     },
     {
-      "route": "/api/PredictFunction",
-      "allowedRoles": ["anonymous"],
-      "methods": ["POST"],
-      "backendUri": "%BACKEND_URL%/api/PredictFunction"
+      "route": "/api/*",
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/*",
