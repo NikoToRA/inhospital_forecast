@@ -115,11 +115,7 @@ device_detection_js = """
 
 st.markdown(device_detection_js, unsafe_allow_html=True)
 
-# URLクエリパラメータからモバイル検出結果を取得
-query_params = st.query_params
-if 'mobile_detected' in query_params:
-    st.session_state.is_mobile = query_params['mobile_detected'][0] == 'true'
-
+# 古いStreamlitバージョン(1.24.0)ではquery_paramsがないため互換性のある実装に変更
 # 画面幅の検出
 def is_mobile_device():
     # SessionStateにモバイル検出フラグがなければ初期化
