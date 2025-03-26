@@ -32,6 +32,14 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
       
+      # フロントエンドのビルド
+      - name: Build frontend
+        run: |
+          cd frontend
+          python build_app.py
+          cd ..
+          ls -la frontend/build
+      
       # Static Web Appsへのデプロイ
       - name: Build And Deploy
         id: builddeploy
@@ -40,10 +48,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/frontend"
-          api_location: "/api"
-          output_location: ""
-          app_build_command: "streamlit build streamlit_app.py --output-dir=build"
+          app_location: "frontend"
+          api_location: "api"
+          output_location: "build"
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -56,4 +64,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "close"
-          app_location: "/frontend" 
+          app_location: "frontend" 
