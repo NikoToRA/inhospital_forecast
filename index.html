@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BED: Bed Entry and Discharge Predictor</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>BED: Bed Entry and Discharge Predictor</h2>
+                <p>入院患者数予測システム</p>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>使い方</h3>
+                <ol>
+                    <li>「単一予測」タブで1つのシナリオを予測</li>
+                    <li>「月間カレンダー」タブで一ヶ月分のカレンダー表示</li>
+                    <li>「シナリオ比較」タブで複数条件を比較</li>
+                    <li>「データ分析」タブでデータを分析</li>
+                </ol>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>表示設定</h3>
+                <div class="form-group">
+                    <label class="checkbox-container">
+                        <span>モバイル画面に最適化</span>
+                        <input type="checkbox" id="mobile-mode">
+                        <span class="checkmark"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>トラブルシューティング</h3>
+                <p>問題が発生した場合:</p>
+                <ul>
+                    <li>ブラウザをリフレッシュしてください</li>
+                    <li>別のブラウザを試してください</li>
+                    <li>キャッシュをクリアしてください</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="app-header">
+                <h1>🏥 BED: Bed Entry and Discharge Predictor</h1>
+                <p>入院患者数予測システム</p>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-button active" data-tab="tab1">単一予測</button>
+                <button class="tab-button" data-tab="tab2">月間カレンダー</button>
+                <button class="tab-button" data-tab="tab3">シナリオ比較</button>
+                <button class="tab-button" data-tab="tab4">データ分析</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- タブ1: 単一予測 -->
+                <div id="tab1" class="tab-pane active">
+                    <h2>今日の入院患者数を予測</h2>
+                    <p>👇 以下に今日のデータを入力して「予測実行」ボタンをクリックしてください</p>
+                    
+                    <div class="form-container">
+                        <div class="form-row">
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="prediction-date">日付を選択</label>
+                                    <input type="date" id="prediction-date" class="form-control">
+                                </div>
+                                <div id="date-info" class="date-info">
+                                    <!-- ここに日付情報が表示されます -->
+                                </div>
+                            </div>
+                            
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="total-outpatient">前日総外来患者数</label>
+                                    <input type="number" id="total-outpatient" class="form-control" min="0" max="2000" value="500">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="intro-outpatient">前日紹介外来患者数</label>
+                                    <input type="number" id="intro-outpatient" class="form-control" min="0" max="200" value="20">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="er-count">前日救急搬送患者数</label>
+                                    <input type="number" id="er-count" class="form-control" min="0" max="100" value="15">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="bed-count">現在の病床利用数</label>
+                                    <input type="number" id="bed-count" class="form-control" min="100" max="1000" value="280">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button id="predict-button" class="primary-button">予測実行</button>
+                    </div>
+                    
+                    <div id="prediction-result" class="prediction-result hidden">
+                        <div class="prediction-value">
+                            <h3>予測入院患者数: <span id="prediction-value">--</span> 人</h3>
+                        </div>
+                        
+                        <h3>今後1週間の予測</h3>
+                        <div class="table-responsive">
+                            <table id="weekly-forecast-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>日付</th>
+                                        <th>曜日</th>
+                                        <th>予測入院患者数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- 週間予測データがここに入ります -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="weekly-chart" class="chart-container">
+                            <!-- 週間予測のグラフがここに表示されます -->
+                            <canvas id="weekly-chart-canvas"></canvas>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div class="save-section">
+                            <h3>データの保存</h3>
+                            <p>この予測結果をデータとして保存しますか？保存すると、将来の予測精度向上に役立ちます。</p>
+                            <div class="save-controls">
+                                <button id="save-prediction-button" class="primary-button">予測結果を保存</button>
+                                
+                                <div id="save-form" class="save-form hidden">
+                                    <div class="form-group">
+                                        <label for="real-admission">実際の入院患者数を入力してください</label>
+                                        <input type="number" id="real-admission" class="form-control" min="0" max="1000" step="0.1">
+                                    </div>
+                                    <button id="confirm-save-button" class="secondary-button">確定して保存</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- タブ2: 月間カレンダー -->
+                <div id="tab2" class="tab-pane">
+                    <h2>月間混雑予想カレンダー</h2>
+                    
+                    <div class="form-container">
+                        <div class="form-row">
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="calendar-month">月を選択</label>
+                                    <select id="calendar-month" class="form-control">
+                                        <option value="1">1月</option>
+                                        <option value="2">2月</option>
+                                        <option value="3">3月</option>
+                                        <option value="4">4月</option>
+                                        <option value="5">5月</option>
+                                        <option value="6">6月</option>
+                                        <option value="7">7月</option>
+                                        <option value="8">8月</option>
+                                        <option value="9">9月</option>
+                                        <option value="10">10月</option>
+                                        <option value="11">11月</option>
+                                        <option value="12">12月</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="calendar-year">年を選択</label>
+                                    <select id="calendar-year" class="form-control">
+                                        <!-- JavaScriptで動的に生成 -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h3>病院平均パラメータ</h3>
+                        <div class="form-row">
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="avg-total-outpatient">平均前日総外来患者数</label>
+                                    <input type="number" id="avg-total-outpatient" class="form-control" min="0" max="2000" value="500">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="avg-intro-outpatient">平均前日紹介外来患者数</label>
+                                    <input type="number" id="avg-intro-outpatient" class="form-control" min="0" max="200" value="20">
+                                </div>
+                            </div>
+                            
+                            <div class="form-column">
+                                <div class="form-group">
+                                    <label for="avg-er">平均前日救急搬送患者数</label>
+                                    <input type="number" id="avg-er" class="form-control" min="0" max="100" value="15">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="avg-bed-count">平均現在の病床利用数</label>
+                                    <input type="number" id="avg-bed-count" class="form-control" min="100" max="1000" value="280">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button id="show-calendar-button" class="primary-button">カレンダーを表示</button>
+                    </div>
+                    
+                    <div id="calendar-result" class="calendar-result hidden">
+                        <div id="monthly-calendar" class="calendar-container">
+                            <!-- 月間カレンダーがここに表示されます -->
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table id="monthly-forecast-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>日付</th>
+                                        <th>曜日</th>
+                                        <th>祝日</th>
+                                        <th>混雑度</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- 月間予測データがここに入ります -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- タブ3: シナリオ比較 -->
+                <div id="tab3" class="tab-pane">
+                    <h2>シナリオ比較</h2>
+                    <p>👇 複数の条件で入院患者数を予測し、比較することができます</p>
+                    
+                    <div class="scenario-selector">
+                        <div class="radio-group">
+                            <label class="radio-container">
+                                <input type="radio" name="scenario-type" value="predefined" checked>
+                                <span class="radio-label">事前定義シナリオを使用</span>
+                            </label>
+                            <label class="radio-container">
+                                <input type="radio" name="scenario-type" value="custom">
+                                <span class="radio-label">カスタムシナリオを作成</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="predefined-scenarios" class="scenarios-container">
+                        <h3>比較するシナリオを選択</h3>
+                        <div class="checkbox-group">
+                            <label class="checkbox-container">
+                                <input type="checkbox" name="predefined-scenario" value="scenario1" checked>
+                                <span class="checkbox-label">月曜日、外来患者数が多い</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" name="predefined-scenario" value="scenario2" checked>
+                                <span class="checkbox-label">火曜日、通常の外来患者数</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" name="predefined-scenario" value="scenario3" checked>
+                                <span class="checkbox-label">水曜日、外来患者数が多い</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" name="predefined-scenario" value="scenario4" checked>
+                                <span class="checkbox-label">土曜日、少ない外来患者数</span>
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" name="predefined-scenario" value="scenario5" checked>
+                                <span class="checkbox-label">祝日（平日想定）</span>
+                            </label>
+                        </div>
+                        
+                        <button id="compare-predefined-button" class="primary-button">シナリオ比較実行</button>
+                    </div>
+                    
+                    <div id="custom-scenarios" class="scenarios-container hidden">
+                        <h3>カスタムシナリオの作成</h3>
+                        <div class="form-group">
+                            <label for="num-scenarios">作成するシナリオの数</label>
+                            <input type="number" id="num-scenarios" class="form-control" min="1" max="5" value="2">
+                        </div>
+                        
+                        <div id="custom-scenarios-container">
+                            <!-- カスタムシナリオのフォームがここに動的に生成されます -->
+                        </div>
+                        
+                        <button id="compare-custom-button" class="primary-button">カスタムシナリオ比較実行</button>
+                    </div>
+                    
+                    <div id="scenario-comparison-result" class="comparison-result hidden">
+                        <div class="table-responsive">
+                            <table id="scenario-comparison-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>シナリオ</th>
+                                        <th>日付</th>
+                                        <th>曜日</th>
+                                        <th>予測入院患者数</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- シナリオ比較データがここに入ります -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="comparison-chart" class="chart-container">
+                            <!-- シナリオ比較のグラフがここに表示されます -->
+                            <canvas id="comparison-chart-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- タブ4: データ分析 -->
+                <div id="tab4" class="tab-pane">
+                    <h2>データ分析</h2>
+                    
+                    <div id="data-analysis">
+                        <h3>データサンプル</h3>
+                        <div class="table-responsive">
+                            <table id="data-sample-table" class="data-table">
+                                <!-- データサンプルがここに表示されます -->
+                            </table>
+                        </div>
+                        
+                        <h3>基本統計量</h3>
+                        <div class="table-responsive">
+                            <table id="data-stats-table" class="data-table">
+                                <!-- 基本統計量がここに表示されます -->
+                            </table>
+                        </div>
+                        
+                        <div class="charts-container">
+                            <div class="chart-item">
+                                <h3>入院患者数の推移</h3>
+                                <div class="chart-container">
+                                    <canvas id="time-series-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-item">
+                                <h3>曜日別の平均入院患者数</h3>
+                                <div class="chart-container">
+                                    <canvas id="day-of-week-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-item">
+                                <h3>外来患者数と入院患者数の関係</h3>
+                                <div class="chart-container">
+                                    <canvas id="scatter-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.2.1/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
+    <script src="js/holidays.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/predictor.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

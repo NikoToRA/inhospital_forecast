@@ -1,0 +1,6 @@
+@echo off
+echo Installing required packages...
+pip install flask pandas numpy joblib flask-cors jpholiday
+
+echo Starting Flask application...
+python app_flask.py
