@@ -32,13 +32,20 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
       
-      # フロントエンドのビルド
-      - name: Build frontend
+      # フロントエンドの静的ファイル作成（シンプル化）
+      - name: Create simple frontend
         run: |
-          cd frontend
-          python build_app.py
-          cd ..
+          mkdir -p frontend/build
+          echo '<!DOCTYPE html><html><head><title>InHospital Forecast</title></head><body><h1>InHospital Forecast API</h1><p>API endpoints available at:</p><ul><li><a href="/api/DataFunction">/api/DataFunction</a></li><li><a href="/api/PredictFunction">/api/PredictFunction</a></li></ul></body></html>' > frontend/build/index.html
           ls -la frontend/build
+      
+      # デバッグ情報
+      - name: Debug environment
+        run: |
+          echo "Current directory structure:"
+          find . -type d -not -path "*/\.*" | sort
+          echo "Secret availability check:"
+          if [ -n "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}" ]; then echo "Token is set"; else echo "Token is NOT set"; fi
       
       # Static Web Appsへのデプロイ
       - name: Build And Deploy
