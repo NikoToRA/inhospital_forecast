@@ -32,11 +32,9 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
 
-      - name: Prepare build directory
+      - name: Prepare static content
         run: |
-          # Create build directory
           mkdir -p frontend/build
-          # Create static content
           echo '<!DOCTYPE html>
           <html>
           <head>
@@ -56,8 +54,39 @@ jobs:
               </div>
           </body>
           </html>' > frontend/build/index.html
-          # Debug: List contents
-          ls -la frontend/build/
+
+      - name: Prepare API
+        run: |
+          # Create function.json files if they don't exist
+          for func in DataFunction PredictFunction; do
+            if [ ! -f "api/$func/function.json" ]; then
+              echo '{
+                "bindings": [
+                  {
+                    "authLevel": "anonymous",
+                    "type": "httpTrigger",
+                    "direction": "in",
+                    "name": "req",
+                    "methods": ["get", "post"]
+                  },
+                  {
+                    "type": "http",
+                    "direction": "out",
+                    "name": "$return"
+                  }
+                ]
+              }' > "api/$func/function.json"
+            fi
+          done
+
+          # Create or update host.json
+          echo '{
+            "version": "2.0",
+            "extensionBundle": {
+              "id": "Microsoft.Azure.Functions.ExtensionBundle",
+              "version": "[2.*, 3.0.0)"
+            }
+          }' > api/host.json
 
       - name: Build And Deploy
         id: builddeploy
@@ -69,7 +98,8 @@ jobs:
           app_location: "frontend/build"
           api_location: "api"
           output_location: "."
-          skip_api_build: true
+          api_build_command: "python -m pip install -r requirements.txt"
+          app_artifact_location: "build"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
