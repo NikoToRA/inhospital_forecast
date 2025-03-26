@@ -1,8 +1,16 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "allowedRoles": ["anonymous", "authenticated"]
+      "route": "/api/DataFunction",
+      "allowedRoles": ["anonymous"],
+      "methods": ["GET"],
+      "backendUri": "%BACKEND_URL%/api/DataFunction"
+    },
+    {
+      "route": "/api/PredictFunction",
+      "allowedRoles": ["anonymous"],
+      "methods": ["POST"],
+      "backendUri": "%BACKEND_URL%/api/PredictFunction"
     },
     {
       "route": "/*",
