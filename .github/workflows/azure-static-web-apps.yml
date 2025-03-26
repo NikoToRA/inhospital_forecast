@@ -1,5 +1,6 @@
 name: Azure Static Web Apps CI/CD
 
+# Deployment configuration for inhospitalforcast2
 on:
   push:
     branches:
