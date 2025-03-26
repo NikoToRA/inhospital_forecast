@@ -29,11 +29,30 @@ jobs:
           pip install -r frontend/requirements.txt
           pip install -r api/requirements.txt
 
-      - name: Build static site
+      - name: Create static content
         run: |
-          cd frontend
-          python build_static.py
-          cd ..
+          mkdir -p frontend/build
+          cat > frontend/build/index.html << 'EOL'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>InHospital Forecast</title>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+          </head>
+          <body>
+              <div class="container py-4">
+                  <h1>InHospital Forecast API</h1>
+                  <p>Available API endpoints:</p>
+                  <ul>
+                      <li><a href="/api/DataFunction">/api/DataFunction</a></li>
+                      <li><a href="/api/PredictFunction">/api/PredictFunction</a></li>
+                  </ul>
+              </div>
+          </body>
+          </html>
+          EOL
 
       - name: Build And Deploy
         id: builddeploy
@@ -45,6 +64,7 @@ jobs:
           app_location: "frontend/build"
           api_location: "api"
           output_location: ""
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -56,4 +76,5 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: "close" 
+          action: "close"
+          app_location: "frontend/build" 
