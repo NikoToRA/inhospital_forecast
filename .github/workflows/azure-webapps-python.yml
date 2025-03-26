@@ -8,7 +8,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: inhospital-forecast    # Azure Web Appの名前を設定
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.8'
 
 jobs:
   build-and-deploy:
@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        cd api && pip install -r requirements.txt
+        cd api && pip install --only-binary=scikit-learn -r requirements.txt
 
     - name: Build static HTML content
       run: |
