@@ -1,0 +1,30 @@
+{
+  "routes": [
+    {
+      "route": "/api/*",
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/*",
+      "serve": "/",
+      "statusCode": 200
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/",
+    "exclude": ["/images/*.{png,jpg,gif}", "/css/*", "/js/*"]
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/"
+    }
+  },
+  "globalHeaders": {
+    "content-security-policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: *.azurewebsites.net blob:;",
+    "cache-control": "must-revalidate, max-age=60"
+  },
+  "mimeTypes": {
+    ".json": "text/json",
+    ".csv": "text/csv"
+  }
+} 
