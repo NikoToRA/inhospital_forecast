@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BED: Bed Entry and Discharge Predictor</title>
+    <link rel="icon" href="img/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>InHospital Forecast</h1>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-target="prediction-tab">入院日数予測</div>
+            <div class="tab" data-target="data-tab">データ閲覧</div>
+            <div class="tab" data-target="about-tab">アプリについて</div>
+        </div>
+
+        <!-- 入院日数予測タブ -->
+        <div id="prediction-tab" class="tab-content active">
+            <h2>入院日数予測</h2>
+            <p>患者情報を入力して、入院日数を予測します。</p>
+
+            <div class="form-container">
+                <form id="prediction-form">
+                    <div class="form-group">
+                        <label for="age">年齢:</label>
+                        <input type="number" id="age" name="age" min="0" max="120" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">性別:</label>
+                        <select id="gender" name="gender" required>
+                            <option value="男性">男性</option>
+                            <option value="女性">女性</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="diagnosis">診断名:</label>
+                        <input type="text" id="diagnosis" name="diagnosis" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admission_date">入院日:</label>
+                        <input type="date" id="admission_date" name="admission_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admission_type">入院種別:</label>
+                        <select id="admission_type" name="admission_type" required>
+                            <option value="緊急">緊急</option>
+                            <option value="予定">予定</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn">予測する</button>
+                </form>
+            </div>
+
+            <div class="result-container">
+                <h3>予測結果</h3>
+                <div id="prediction-result" class="result-display">
+                    ここに予測結果が表示されます。
+                </div>
+            </div>
+        </div>
+
+        <!-- データ閲覧タブ -->
+        <div id="data-tab" class="tab-content">
+            <h2>データ閲覧</h2>
+            <p>サンプルデータを閲覧します。</p>
+
+            <button onclick="fetchData()" class="btn">データを取得</button>
+
+            <div class="result-container">
+                <h3>データ結果</h3>
+                <div id="data-result" class="result-display">
+                    「データを取得」ボタンをクリックしてください。
+                </div>
+            </div>
+        </div>
+
+        <!-- アプリについてタブ -->
+        <div id="about-tab" class="tab-content">
+            <h2>InHospital Forecastについて</h2>
+            
+            <div class="form-container">
+                <h3>機能概要</h3>
+                <p>
+                    このアプリケーションは、患者の基本情報（年齢、性別、診断名など）から入院日数を予測するためのツールです。
+                    機械学習モデル（ランダムフォレスト）を用いて、過去の入院データに基づいた予測を行います。
+                </p>
+
+                <h3>予測の仕組み</h3>
+                <p>
+                    予測には、以下の特徴量が使用されています：
+                </p>
+                <ul>
+                    <li>年齢</li>
+                    <li>性別</li>
+                    <li>診断名</li>
+                    <li>入院日の曜日</li>
+                    <li>祝日かどうか</li>
+                    <li>入院種別（緊急/予定）</li>
+                </ul>
+
+                <h3>開発情報</h3>
+                <p>
+                    本アプリケーションは、医療機関における業務効率化とリソース配分の最適化を目的として開発されました。
+                    入院日数の精度の高い予測により、病床管理や人員配置の計画立案に役立てることができます。
+                </p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>&copy; 2024 InHospital Forecast</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html> 

@@ -1,8 +1,13 @@
 {
   "routes": [
     {
+      "route": "/api/streamlit",
+      "allowedRoles": ["anonymous"],
+      "serve": "/api/streamlit"
+    },
+    {
       "route": "/api/*",
-      "allowedRoles": ["anonymous", "authenticated"]
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/*",

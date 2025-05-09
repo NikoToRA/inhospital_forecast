@@ -60,6 +60,11 @@ def build_streamlit_app():
             margin-top: 20px;
             font-weight: bold;
         }
+        .streamlit-button {
+            background: linear-gradient(90deg, #00467F, #A5CC82);
+            font-size: 1.2em;
+            padding: 15px 30px;
+        }
     </style>
 </head>
 <body>
@@ -67,11 +72,15 @@ def build_streamlit_app():
         <h1>InHospital Forecast</h1>
         <p>
             この静的Webサイトは、Azure Static Web Appsにデプロイされています。<br>
-            APIへのアクセスは、この静的ページを通じて行われます。
+            Streamlitアプリを起動するには、下のボタンをクリックしてください。
         </p>
-        <a href="/api/DataFunction" class="button">データ取得APIへアクセス</a>
-        <br>
-        <a href="/api/PredictFunction" class="button">予測APIへアクセス</a>
+        
+        <a href="/api/streamlit" class="button streamlit-button">Streamlitアプリを起動</a>
+        
+        <h3>APIアクセス</h3>
+        <p>APIへ直接アクセスする場合は以下のリンクを使用してください。</p>
+        <a href="/api/DataFunction" class="button">データ取得API</a>
+        <a href="/api/PredictFunction" class="button">予測API</a>
     </div>
 </body>
 </html>
