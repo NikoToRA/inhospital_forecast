@@ -7,4 +7,6 @@ joblib>=1.2.0
 gunicorn>=20.1.0
 python-dotenv>=1.0.0
 supabase>=1.0.3
-psycopg2-binary>=2.9.6 
+psycopg2-binary>=2.9.6
+azure-storage-blob>=12.14.0
+azure-identity>=1.12.0 

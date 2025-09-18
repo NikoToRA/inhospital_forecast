@@ -6,15 +6,17 @@ pool:
 
 variables:
   # Node.js
-  nodeVersion: '16.x'
+  nodeVersion: '18.x'
   # Python
-  pythonVersion: '3.8'
+  pythonVersion: '3.9'
   # Azure サービス接続名
   azureSubscription: 'your-azure-subscription'
   # Web App名
-  webAppName: 'inhospital-forecast'
+  webAppName: 'inhospital-forecast-app'
   # 環境名
   environmentName: 'production'
+  # リソースグループ
+  resourceGroupName: 'inhospital-forecast-rg'
 
 stages:
 - stage: Build
@@ -94,6 +96,30 @@ stages:
           </appSettings>
         </configuration>' > $(Build.ArtifactStagingDirectory)/app/web.config
       displayName: 'Create Web.config'
+
+    # Azure Storage にモデルファイルをアップロード
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: '$(azureSubscription)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          # Storage Account名を取得
+          STORAGE_ACCOUNT=$(az storage account list --resource-group $(resourceGroupName) --query "[0].name" -o tsv)
+          echo "Storage Account: $STORAGE_ACCOUNT"
+
+          # モデルファイルをアップロード
+          if [ -f "fixed_rf_model.joblib" ]; then
+            az storage blob upload --account-name $STORAGE_ACCOUNT --container-name models --name fixed_rf_model.joblib --file fixed_rf_model.joblib --overwrite
+            echo "Model file uploaded successfully"
+          fi
+
+          # CSVファイルをアップロード
+          if [ -f "ultimate_pickup_data.csv" ]; then
+            az storage blob upload --account-name $STORAGE_ACCOUNT --container-name models --name ultimate_pickup_data.csv --file ultimate_pickup_data.csv --overwrite
+            echo "CSV file uploaded successfully"
+          fi
+      displayName: 'Upload Model and Data to Azure Storage'
 
     # デプロイパッケージの作成
     - task: ArchiveFiles@2

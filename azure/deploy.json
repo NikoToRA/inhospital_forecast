@@ -1,0 +1,222 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "defaultValue": "inhospital-forecast",
+            "metadata": {
+                "description": "Web app name."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "sku": {
+            "type": "string",
+            "defaultValue": "F1",
+            "metadata": {
+                "description": "The SKU of App Service Plan."
+            }
+        },
+        "postgresqlServerName": {
+            "type": "string",
+            "defaultValue": "[concat(parameters('webAppName'), '-pg')]",
+            "metadata": {
+                "description": "PostgreSQL server name."
+            }
+        },
+        "postgresqlAdminLogin": {
+            "type": "string",
+            "defaultValue": "postgresadmin",
+            "metadata": {
+                "description": "PostgreSQL admin username."
+            }
+        },
+        "postgresqlAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "PostgreSQL admin password."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "[concat(replace(parameters('webAppName'), '-', ''), 'storage')]",
+            "metadata": {
+                "description": "Storage account name for blob storage."
+            }
+        }
+    },
+    "variables": {
+        "appServicePlanName": "[concat(parameters('webAppName'), '-plan')]",
+        "postgresqlDatabaseName": "inhospital_forecast",
+        "containerName": "models"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2021-02-01",
+            "name": "[variables('appServicePlanName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('sku')]"
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('webAppName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('postgresqlServerName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "siteConfig": {
+                    "linuxFxVersion": "PYTHON|3.9",
+                    "appCommandLine": "gunicorn --bind=0.0.0.0 --timeout 600 app:app",
+                    "appSettings": [
+                        {
+                            "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                            "value": "true"
+                        },
+                        {
+                            "name": "AZURE_STORAGE_CONNECTION_STRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2021-04-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "AZURE_STORAGE_CONTAINER",
+                            "value": "[variables('containerName')]"
+                        },
+                        {
+                            "name": "DATABASE_URL",
+                            "value": "[concat('postgresql://', parameters('postgresqlAdminLogin'), ':', parameters('postgresqlAdminPassword'), '@', reference(resourceId('Microsoft.DBforPostgreSQL/servers', parameters('postgresqlServerName'))).fullyQualifiedDomainName, ':5432/', variables('postgresqlDatabaseName'), '?sslmode=require')]"
+                        },
+                        {
+                            "name": "FLASK_ENV",
+                            "value": "production"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/servers",
+            "apiVersion": "2017-12-01",
+            "name": "[parameters('postgresqlServerName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "B_Gen5_1",
+                "tier": "Basic",
+                "capacity": 1,
+                "size": "51200",
+                "family": "Gen5"
+            },
+            "properties": {
+                "createMode": "Default",
+                "version": "11",
+                "administratorLogin": "[parameters('postgresqlAdminLogin')]",
+                "administratorLoginPassword": "[parameters('postgresqlAdminPassword')]",
+                "storageProfile": {
+                    "storageMB": 51200,
+                    "backupRetentionDays": 7,
+                    "geoRedundantBackup": "Disabled",
+                    "storageAutogrow": "Enabled"
+                },
+                "sslEnforcement": "Enabled",
+                "minimalTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/servers/databases",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('postgresqlServerName'), '/', variables('postgresqlDatabaseName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('postgresqlServerName'))]"
+            ],
+            "properties": {
+                "charset": "utf8",
+                "collation": "en_US.utf8"
+            }
+        },
+        {
+            "type": "Microsoft.DBforPostgreSQL/servers/firewallRules",
+            "apiVersion": "2017-12-01",
+            "name": "[concat(parameters('postgresqlServerName'), '/AllowAzureServices')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DBforPostgreSQL/servers', parameters('postgresqlServerName'))]"
+            ],
+            "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(parameters('storageAccountName'), '/default/', variables('containerName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "publicAccess": "None"
+            }
+        }
+    ],
+    "outputs": {
+        "webAppUrl": {
+            "type": "string",
+            "value": "[concat('https://', reference(resourceId('Microsoft.Web/sites', parameters('webAppName'))).hostNames[0])]"
+        },
+        "postgresqlServerFqdn": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.DBforPostgreSQL/servers', parameters('postgresqlServerName'))).fullyQualifiedDomainName]"
+        },
+        "storageAccountName": {
+            "type": "string",
+            "value": "[parameters('storageAccountName')]"
+        },
+        "storageConnectionString": {
+            "type": "string",
+            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2021-04-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+        }
+    }
+}

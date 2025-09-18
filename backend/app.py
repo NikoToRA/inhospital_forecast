@@ -11,13 +11,32 @@ app = Flask(__name__)
 # CORSを強化して明示的に許可するオリジンを指定
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
 
+# Azure Storageサービスをインポート
+from azure_storage import AzureStorageService
+from database import DatabaseService
+
+# Azure Storageサービスを初期化
+azure_storage = AzureStorageService()
+
+# データベースサービスを初期化
+db_service = DatabaseService()
+
 # モデルのパスを設定（環境変数から取得、または固定パス）
 MODEL_PATH = os.environ.get('MODEL_PATH', '../fixed_rf_model.joblib')
 
 # モデルをロード
 def load_model():
     try:
-        # ファイルの存在確認
+        # まずAzure Storageからモデルを試行
+        print("Azure Storageからモデルをダウンロード中...")
+        model = azure_storage.download_model('fixed_rf_model.joblib')
+
+        if model is not None:
+            print("Azure Storageからモデルを正常にロードしました")
+            return model
+
+        # Azure Storageが失敗した場合、ローカルファイルを試行
+        print("ローカルファイルからモデルをロード中...")
         model_paths = [
             os.path.abspath(MODEL_PATH),
             os.path.abspath('models/fixed_rf_model.joblib'),
@@ -26,7 +45,7 @@ def load_model():
             os.path.abspath('./fixed_rf_model.joblib'),
             os.path.abspath('/Users/HirayamaSuguru2/Desktop/AI実験室/inhospital_forecast2/backend/models/fixed_rf_model.joblib')
         ]
-        
+
         # すべてのパスをチェック
         model_path = None
         for path in model_paths:
@@ -34,7 +53,7 @@ def load_model():
                 print(f"モデルファイルが見つかりました: {path}")
                 model_path = path
                 break
-        
+
         if model_path is None:
             print(f"警告: どのパスにもモデルファイルが見つかりません。")
             print("ダミーモデルを使用します。")
@@ -256,15 +275,19 @@ def predict():
         # 予測を実行
         prediction = model.predict(df)
         
-        # 結果を返す
-        return jsonify({
+        # 予測結果をデータベースにログ
+        prediction_data = {
             "prediction": float(prediction[0]),
             "date": date_str,
             "day": day_code,
             "day_name": day_name_ja(day_code),
             "season": get_season(date_str),
             "features": features
-        })
+        }
+        db_service.log_prediction(prediction_data)
+
+        # 結果を返す
+        return jsonify(prediction_data)
         
     except Exception as e:
         print(f"予測中にエラーが発生しました: {e}")
@@ -332,8 +355,21 @@ def predict_week():
 @app.route('/api/scenarios', methods=['GET'])
 def get_scenarios():
     try:
-        # CSVファイルからシナリオを読み込む
-        df = pd.read_csv('../ultimate_pickup_data.csv')
+        # まずAzure StorageからCSVを試行
+        df = azure_storage.download_csv_data('ultimate_pickup_data.csv')
+
+        if df is None:
+            # データベースからシナリオデータを試行
+            df = db_service.get_scenario_data()
+
+        if df is None:
+            # ローカルファイルから読み込み
+            try:
+                df = pd.read_csv('../ultimate_pickup_data.csv')
+                # データベースにキャッシュ
+                db_service.store_scenario_data(df)
+            except FileNotFoundError:
+                return jsonify({"error": "Scenario data not found"}), 404
         
         # 代表的なシナリオを選択
         scenarios = [
@@ -355,6 +391,43 @@ def get_scenarios():
         
     except Exception as e:
         print(f"シナリオの取得中にエラーが発生しました: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history', methods=['GET'])
+def get_prediction_history():
+    """予測履歴を取得"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        history = db_service.get_prediction_history(limit)
+        return jsonify({
+            "history": history,
+            "count": len(history)
+        })
+    except Exception as e:
+        print(f"予測履歴の取得中にエラーが発生しました: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/storage/status', methods=['GET'])
+def get_storage_status():
+    """Azure StorageとDBの状態を確認"""
+    try:
+        # Azure Storageの状態
+        azure_blobs = azure_storage.list_blobs() if azure_storage.blob_service_client else []
+
+        # データベースの状態
+        db_available = db_service.connection is not None
+
+        return jsonify({
+            "azure_storage": {
+                "available": azure_storage.blob_service_client is not None,
+                "blobs": azure_blobs
+            },
+            "database": {
+                "available": db_available
+            }
+        })
+    except Exception as e:
+        print(f"ストレージ状態の確認中にエラーが発生しました: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
