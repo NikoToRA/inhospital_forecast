@@ -11,15 +11,14 @@ app = Flask(__name__)
 # CORSを強化して明示的に許可するオリジンを指定
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
 
-# Azure Storageサービスをインポート
-from azure_storage import AzureStorageService
-from database import DatabaseService
-
-# Azure Storageサービスを初期化
-azure_storage = AzureStorageService()
-
-# データベースサービスを初期化
-db_service = DatabaseService()
+# Supabase設定 (オプション - 使用する場合)
+# from supabase import create_client, Client
+# import os
+#
+# supabase_url = os.environ.get("SUPABASE_URL")
+# supabase_key = os.environ.get("SUPABASE_KEY")
+# if supabase_url and supabase_key:
+#     supabase: Client = create_client(supabase_url, supabase_key)
 
 # モデルのパスを設定（環境変数から取得、または固定パス）
 MODEL_PATH = os.environ.get('MODEL_PATH', '../fixed_rf_model.joblib')
@@ -27,23 +26,13 @@ MODEL_PATH = os.environ.get('MODEL_PATH', '../fixed_rf_model.joblib')
 # モデルをロード
 def load_model():
     try:
-        # まずAzure Storageからモデルを試行
-        print("Azure Storageからモデルをダウンロード中...")
-        model = azure_storage.download_model('fixed_rf_model.joblib')
-
-        if model is not None:
-            print("Azure Storageからモデルを正常にロードしました")
-            return model
-
-        # Azure Storageが失敗した場合、ローカルファイルを試行
-        print("ローカルファイルからモデルをロード中...")
+        # ローカルファイルからモデルをロード
         model_paths = [
             os.path.abspath(MODEL_PATH),
             os.path.abspath('models/fixed_rf_model.joblib'),
             os.path.abspath('../fixed_rf_model.joblib'),
             os.path.abspath('./models/fixed_rf_model.joblib'),
-            os.path.abspath('./fixed_rf_model.joblib'),
-            os.path.abspath('/Users/HirayamaSuguru2/Desktop/AI実験室/inhospital_forecast2/backend/models/fixed_rf_model.joblib')
+            os.path.abspath('./fixed_rf_model.joblib')
         ]
 
         # すべてのパスをチェック
@@ -275,19 +264,15 @@ def predict():
         # 予測を実行
         prediction = model.predict(df)
         
-        # 予測結果をデータベースにログ
-        prediction_data = {
+        # 結果を返す
+        return jsonify({
             "prediction": float(prediction[0]),
             "date": date_str,
             "day": day_code,
             "day_name": day_name_ja(day_code),
             "season": get_season(date_str),
             "features": features
-        }
-        db_service.log_prediction(prediction_data)
-
-        # 結果を返す
-        return jsonify(prediction_data)
+        })
         
     except Exception as e:
         print(f"予測中にエラーが発生しました: {e}")
@@ -355,21 +340,11 @@ def predict_week():
 @app.route('/api/scenarios', methods=['GET'])
 def get_scenarios():
     try:
-        # まずAzure StorageからCSVを試行
-        df = azure_storage.download_csv_data('ultimate_pickup_data.csv')
-
-        if df is None:
-            # データベースからシナリオデータを試行
-            df = db_service.get_scenario_data()
-
-        if df is None:
-            # ローカルファイルから読み込み
-            try:
-                df = pd.read_csv('../ultimate_pickup_data.csv')
-                # データベースにキャッシュ
-                db_service.store_scenario_data(df)
-            except FileNotFoundError:
-                return jsonify({"error": "Scenario data not found"}), 404
+        # ローカルファイルからCSVを読み込み
+        try:
+            df = pd.read_csv('../ultimate_pickup_data.csv')
+        except FileNotFoundError:
+            return jsonify({"error": "Scenario data not found"}), 404
         
         # 代表的なシナリオを選択
         scenarios = [
@@ -393,41 +368,20 @@ def get_scenarios():
         print(f"シナリオの取得中にエラーが発生しました: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/history', methods=['GET'])
-def get_prediction_history():
-    """予測履歴を取得"""
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    """アプリケーションの状態を確認"""
     try:
-        limit = request.args.get('limit', 100, type=int)
-        history = db_service.get_prediction_history(limit)
         return jsonify({
-            "history": history,
-            "count": len(history)
-        })
-    except Exception as e:
-        print(f"予測履歴の取得中にエラーが発生しました: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/storage/status', methods=['GET'])
-def get_storage_status():
-    """Azure StorageとDBの状態を確認"""
-    try:
-        # Azure Storageの状態
-        azure_blobs = azure_storage.list_blobs() if azure_storage.blob_service_client else []
-
-        # データベースの状態
-        db_available = db_service.connection is not None
-
-        return jsonify({
-            "azure_storage": {
-                "available": azure_storage.blob_service_client is not None,
-                "blobs": azure_blobs
+            "local_files": {
+                "model_exists": os.path.exists("../fixed_rf_model.joblib"),
+                "data_exists": os.path.exists("../ultimate_pickup_data.csv")
             },
-            "database": {
-                "available": db_available
-            }
+            "model_loaded": model is not None,
+            "app_version": "1.0.0"
         })
     except Exception as e:
-        print(f"ストレージ状態の確認中にエラーが発生しました: {e}")
+        print(f"状態確認中にエラーが発生しました: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
