@@ -1,0 +1,135 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Node.js
+  nodeVersion: '16.x'
+  # Python
+  pythonVersion: '3.8'
+  # Azure サービス接続名
+  azureSubscription: 'your-azure-subscription'
+  # Web App名
+  webAppName: 'inhospital-forecast'
+  # 環境名
+  environmentName: 'production'
+
+stages:
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build'
+    steps:
+    # Python環境のセットアップ
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(pythonVersion)'
+        addToPath: true
+      displayName: 'Install Python $(pythonVersion)'
+
+    # バックエンドのビルド
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+      displayName: 'Install Python dependencies'
+
+    # Node.jsのインストール
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node.js $(nodeVersion)'
+
+    # フロントエンドのビルド
+    - script: |
+        cd frontend
+        npm install
+        npm run build
+      displayName: 'Build Frontend'
+
+    # バックエンドとフロントエンドを1つのディレクトリにまとめる
+    - script: |
+        mkdir -p $(Build.ArtifactStagingDirectory)/app
+        cp -r backend/* $(Build.ArtifactStagingDirectory)/app/
+        mkdir -p $(Build.ArtifactStagingDirectory)/app/static
+        cp -r frontend/build/* $(Build.ArtifactStagingDirectory)/app/static/
+      displayName: 'Prepare Deployment Package'
+
+    # Web.configの作成
+    - script: |
+        echo '<?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <system.webServer>
+            <handlers>
+              <add name="PythonHandler" path="*" verb="*" modules="FastCgiModule" scriptProcessor="D:\home\Python38\python.exe|D:\home\Python38\wfastcgi.py" resourceType="Unspecified" requireAccess="Script"/>
+            </handlers>
+            <rewrite>
+              <rules>
+                <rule name="Static Files" stopProcessing="true">
+                  <match url="^static/.*" ignoreCase="true" />
+                  <action type="Rewrite" url="static/{R:0}" />
+                </rule>
+                <rule name="API">
+                  <match url="api/(.*)" />
+                  <action type="Rewrite" url="app.py" />
+                </rule>
+                <rule name="ReactRouter Routes">
+                  <match url=".*" />
+                  <conditions logicalGrouping="MatchAll">
+                    <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+                    <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+                    <add input="{REQUEST_URI}" pattern="^/api" negate="true" />
+                  </conditions>
+                  <action type="Rewrite" url="static/index.html" />
+                </rule>
+              </rules>
+            </rewrite>
+          </system.webServer>
+          <appSettings>
+            <add key="PYTHONPATH" value="D:\home\site\wwwroot" />
+            <add key="WSGI_HANDLER" value="app.app" />
+            <add key="WSGI_LOG" value="D:\home\LogFiles\wfastcgi.log" />
+          </appSettings>
+        </configuration>' > $(Build.ArtifactStagingDirectory)/app/web.config
+      displayName: 'Create Web.config'
+
+    # デプロイパッケージの作成
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/app'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/$(webAppName).zip'
+        replaceExistingArchive: true
+      displayName: 'Create Deployment Package'
+
+    # アーティファクトの公開
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)/$(webAppName).zip'
+        artifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: 'Publish Artifacts'
+
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Build
+  jobs:
+  - deployment: DeploymentJob
+    displayName: 'Deploy'
+    environment: $(environmentName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Azureアプリサービスへのデプロイ
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appName: '$(webAppName)'
+              package: '$(Pipeline.Workspace)/drop/$(webAppName).zip'
+              appType: 'webApp'
+              deploymentMethod: 'auto'
+            displayName: 'Deploy to Azure Web App' 
