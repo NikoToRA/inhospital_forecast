@@ -11,14 +11,11 @@ app = Flask(__name__)
 # CORSを強化して明示的に許可するオリジンを指定
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
 
-# Supabase設定 (オプション - 使用する場合)
-# from supabase import create_client, Client
-# import os
-#
-# supabase_url = os.environ.get("SUPABASE_URL")
-# supabase_key = os.environ.get("SUPABASE_KEY")
-# if supabase_url and supabase_key:
-#     supabase: Client = create_client(supabase_url, supabase_key)
+# Supabase設定
+from supabase_client import SupabaseService
+
+# Supabaseサービスを初期化
+supabase_service = SupabaseService()
 
 # モデルのパスを設定（環境変数から取得、または固定パス）
 MODEL_PATH = os.environ.get('MODEL_PATH', '../fixed_rf_model.joblib')
@@ -264,15 +261,24 @@ def predict():
         # 予測を実行
         prediction = model.predict(df)
         
-        # 結果を返す
-        return jsonify({
+        # 予測結果を準備
+        prediction_result = {
             "prediction": float(prediction[0]),
             "date": date_str,
             "day": day_code,
             "day_name": day_name_ja(day_code),
             "season": get_season(date_str),
             "features": features
-        })
+        }
+
+        # Supabaseにログ記録（エラーがあっても処理は継続）
+        try:
+            supabase_service.log_prediction(prediction_result)
+        except Exception as log_error:
+            print(f"Supabaseログ記録エラー: {log_error}")
+
+        # 結果を返す
+        return jsonify(prediction_result)
         
     except Exception as e:
         print(f"予測中にエラーが発生しました: {e}")
@@ -378,10 +384,35 @@ def get_status():
                 "data_exists": os.path.exists("../ultimate_pickup_data.csv")
             },
             "model_loaded": model is not None,
+            "supabase_available": supabase_service.is_available(),
             "app_version": "1.0.0"
         })
     except Exception as e:
         print(f"状態確認中にエラーが発生しました: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history', methods=['GET'])
+def get_prediction_history():
+    """予測履歴を取得"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        history = supabase_service.get_prediction_history(limit)
+        return jsonify({
+            "history": history,
+            "count": len(history)
+        })
+    except Exception as e:
+        print(f"予測履歴の取得中にエラーが発生しました: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """統計情報を取得"""
+    try:
+        stats = supabase_service.get_stats()
+        return jsonify(stats)
+    except Exception as e:
+        print(f"統計情報の取得中にエラーが発生しました: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

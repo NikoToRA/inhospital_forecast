@@ -1,0 +1,12 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+
+[environments.production.variables]
+FLASK_ENV = "production"
+MODEL_PATH = "./fixed_rf_model.joblib"

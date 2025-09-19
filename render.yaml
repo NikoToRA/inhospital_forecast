@@ -1,17 +1,18 @@
 services:
   - type: web
-    name: inhospital-forecast-backend
+    name: inhospital-forecast-api
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn backend.app:app
+    region: oregon
+    plan: free
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app"
+    healthCheckPath: "/api/health"
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.0
+      - key: FLASK_ENV
+        value: production
+      - key: MODEL_PATH
+        value: "./fixed_rf_model.joblib"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
         sync: false
-      - key: FLASK_ENV
-        value: production
-      - key: MODEL_PATH
-        value: fixed_rf_model.joblib 
