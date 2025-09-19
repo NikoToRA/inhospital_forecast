@@ -4,14 +4,21 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app"
+    buildCommand: |
+      cd backend
+      pip install -r requirements.txt
+      # Copy model file to backend directory
+      cp ../fixed_rf_model.joblib ./fixed_rf_model.joblib
+      cp ../ultimate_pickup_data.csv ./ultimate_pickup_data.csv
+    startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app --timeout 600"
     healthCheckPath: "/api/health"
     envVars:
       - key: FLASK_ENV
         value: production
       - key: MODEL_PATH
         value: "./fixed_rf_model.joblib"
+      - key: CORS_ORIGINS
+        value: "*"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY

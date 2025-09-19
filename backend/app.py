@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 import json
 
 app = Flask(__name__)
-# CORSを強化して明示的に許可するオリジンを指定
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000"]}})
+# CORS設定 - 環境変数から取得、またはデフォルト
+cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+CORS(app, resources={r"/api/*": {"origins": cors_origins}})
 
 # Supabase設定
 from supabase_client import SupabaseService
@@ -416,4 +417,6 @@ def get_stats():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000) 
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug, host='0.0.0.0', port=port) 
