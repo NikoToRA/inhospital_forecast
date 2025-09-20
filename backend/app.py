@@ -416,6 +416,117 @@ def get_stats():
         print(f"統計情報の取得中にエラーが発生しました: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/predict_month', methods=['POST'])
+def predict_month():
+    """月間予測を実行"""
+    try:
+        # リクエストからデータを取得
+        data = request.json
+        print(f"受信したデータ: {data}")
+
+        # 年月が指定されていない場合は現在の月を使用
+        year = data.get('year', datetime.now().year)
+        month = data.get('month', datetime.now().month)
+
+        # 月の初日と最終日を計算
+        from calendar import monthrange
+        start_date = datetime(year, month, 1)
+        _, last_day = monthrange(year, month)
+
+        # 月全体の予測を実行
+        predictions = []
+        for day in range(1, last_day + 1):
+            current_date = datetime(year, month, day)
+            date_str = current_date.strftime('%Y-%m-%d')
+            day_code = get_day_code(date_str)
+
+            # 曜日のone-hotエンコーディング
+            day_features = {day: 1 if day == day_code else 0 for day in ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']}
+
+            # 基本データ（土日祝日は外来患者数を調整）
+            base_outpatient = data.get('total_outpatient', 500)
+            base_intro = data.get('intro_outpatient', 20)
+            base_er = data.get('ER', 15)
+
+            # 土日祝日の調整
+            is_weekend = day_code in ['sat', 'sun']
+            is_holiday = data.get('public_holiday', False) if day == 1 else False  # 簡易的な祝日判定
+
+            if is_weekend or is_holiday:
+                adjusted_outpatient = int(base_outpatient * 0.3)  # 土日祝日は30%に減少
+                adjusted_intro = int(base_intro * 0.2)  # 紹介外来も減少
+                adjusted_er = int(base_er * 1.2)  # 救急はやや増加
+            else:
+                adjusted_outpatient = base_outpatient
+                adjusted_intro = base_intro
+                adjusted_er = base_er
+
+            # 特徴量を作成
+            features = {
+                **day_features,
+                'public_holiday': 1 if (is_holiday) else 0,
+                'public_holiday_previous_day': data.get('public_holiday_previous_day', 0),
+                'total_outpatient': adjusted_outpatient,
+                'intro_outpatient': adjusted_intro,
+                'ER': adjusted_er,
+                'bed_count': data.get('bed_count', 280)
+            }
+
+            # DataFrameに変換
+            features_df = pd.DataFrame([features])
+
+            # 予測を実行
+            prediction_value = model.predict(features_df)[0]
+            prediction_rounded = round(prediction_value)
+
+            # 結果に追加
+            predictions.append({
+                'date': date_str,
+                'day': day,
+                'day_of_week': current_date.weekday(),
+                'day_label': ['月', '火', '水', '木', '金', '土', '日'][current_date.weekday()],
+                'prediction': prediction_rounded,
+                'is_weekend': is_weekend,
+                'is_holiday': is_holiday,
+                'features': features
+            })
+
+        # 結果をまとめる
+        month_result = {
+            'year': year,
+            'month': month,
+            'month_name': f"{year}年{month}月",
+            'predictions': predictions,
+            'statistics': {
+                'total_days': len(predictions),
+                'max_prediction': max(p['prediction'] for p in predictions),
+                'min_prediction': min(p['prediction'] for p in predictions),
+                'avg_prediction': round(sum(p['prediction'] for p in predictions) / len(predictions), 1),
+                'weekday_avg': round(sum(p['prediction'] for p in predictions if not p['is_weekend']) / len([p for p in predictions if not p['is_weekend']]), 1),
+                'weekend_avg': round(sum(p['prediction'] for p in predictions if p['is_weekend']) / len([p for p in predictions if p['is_weekend']]), 1) if any(p['is_weekend'] for p in predictions) else 0
+            }
+        }
+
+        # Supabaseに結果をログ
+        if supabase_service.is_available():
+            try:
+                for prediction in predictions:
+                    log_data = {
+                        'date': prediction['date'],
+                        'prediction': prediction['prediction'],
+                        'features': prediction['features']
+                    }
+                    supabase_service.log_prediction(log_data)
+            except Exception as e:
+                print(f"Supabaseログ記録エラー: {e}")
+
+        # 結果を返す
+        return jsonify(month_result)
+
+    except Exception as e:
+        print(f"月間予測中にエラーが発生しました: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') != 'production'
