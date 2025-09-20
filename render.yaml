@@ -7,8 +7,8 @@ services:
     buildCommand: |
       cd backend
       pip install -r requirements.txt
-      # Copy model file to backend directory
-      cp ../fixed_rf_model.joblib ./fixed_rf_model.joblib
+      # Copy model file from models directory
+      cp models/fixed_rf_model.joblib ./fixed_rf_model.joblib
       cp ../ultimate_pickup_data.csv ./ultimate_pickup_data.csv
     startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app --timeout 600"
     healthCheckPath: "/api/health"
