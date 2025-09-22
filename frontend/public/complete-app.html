@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>入院患者数予測システム</title>
+
+    <!-- Material-UI CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Axios for API calls -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- Chart.js for charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .app-bar {
+            background-color: #1976d2;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .app-bar h1 {
+            margin-left: 12px;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .header {
+            margin-bottom: 32px;
+        }
+
+        .header h2 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .header p {
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .error-alert {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+            color: #c62828;
+        }
+
+        .tabs {
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 24px;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #1976d2;
+            border-bottom-color: #1976d2;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .content-grid.dashboard {
+            grid-template-columns: 1fr;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .paper {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .form-section {
+            margin-bottom: 24px;
+        }
+
+        .form-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="text"], input[type="number"], input[type="date"] {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1976d2;
+            box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+        }
+
+        .switch-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #1976d2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .btn {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #1565c0;
+        }
+
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            min-height: 400px;
+        }
+
+        .result-content {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1976d2;
+        }
+
+        .result-value {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+
+        .result-label {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .result-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1976d2;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .alert.info {
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #1976d2;
+        }
+
+        .health-status {
+            background-color: #e8f5e8;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .health-status.error {
+            background-color: #ffebee;
+            border-color: #ffcdd2;
+            color: #c62828;
+        }
+
+        .week-prediction-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+
+        .week-prediction-table th,
+        .week-prediction-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .week-prediction-table th {
+            background-color: #f5f5f5;
+            font-weight: 500;
+        }
+
+        .week-prediction-table td.number {
+            text-align: right;
+        }
+
+        .week-prediction-table tr.holiday {
+            background-color: #fff8e1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 16px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-size: 0.875rem;
+            margin: 2px;
+        }
+
+        .chip.outlined {
+            background-color: transparent;
+            border: 1px solid #1976d2;
+        }
+
+        .chip.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-color: #c62828;
+        }
+
+        .chip.success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border-color: #2e7d32;
+        }
+
+        .badge {
+            background-color: #1976d2;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        .badge.max {
+            background-color: #c62828;
+        }
+
+        .badge.min {
+            background-color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // API設定
+        const API_BASE_URL = 'http://localhost:8000/api';
+
+        // 今日の日付をYYYY-MM-DD形式で取得
+        const getTodayFormatted = () => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // 日付をフォーマット
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            return dateStr.replace(/-/g, '/');
+        };
+
+        // 曜日名を取得
+        const getDayName = (dateStr) => {
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            const date = new Date(dateStr);
+            return days[date.getDay()];
+        };
+
+        // Chart.js設定
+        if (window.Chart) {
+            Chart.register(Chart.CategoryScale, Chart.LinearScale, Chart.PointElement, Chart.LineElement, Chart.BarElement, Chart.Title, Chart.Tooltip, Chart.Legend, Chart.ArcElement);
+        }
+
+        // メインアプリケーション
+        function App() {
+            const [tabValue, setTabValue] = useState(0);
+            const [formData, setFormData] = useState({
+                target_date: getTodayFormatted(),
+                start_date: getTodayFormatted(),
+                public_holiday: false,
+                public_holiday_previous_day: false,
+                total_outpatient: 500,
+                intro_outpatient: 20,
+                er: 15,
+                bed_count: 280
+            });
+            const [result, setResult] = useState(null);
+            const [weekResult, setWeekResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [weekLoading, setWeekLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [healthStatus, setHealthStatus] = useState(null);
+
+            // ヘルスチェック
+            useEffect(() => {
+                checkHealth();
+            }, []);
+
+            const checkHealth = async () => {
+                try {
+                    const response = await axios.get(`${API_BASE_URL}/health`);
+                    setHealthStatus({
+                        status: 'healthy',
+                        data: response.data
+                    });
+                } catch (err) {
+                    setHealthStatus({
+                        status: 'error',
+                        message: 'APIサーバーに接続できません'
+                    });
+                }
+            };
+
+            const handleChange = (e) => {
+                const { name, value, type, checked } = e.target;
+                if (type === 'number') {
+                    setFormData(prev => ({
+                        ...prev,
+                        [name]: parseInt(value, 10) || 0
+                    }));
+                } else if (type === 'checkbox') {
+                    setFormData(prev => ({
+                        ...prev,
+                        [name]: checked
+                    }));
+                } else {
+                    setFormData(prev => ({
+                        ...prev,
+                        [name]: value
+                    }));
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError(null);
+
+                if (tabValue === 0) {
+                    // 翌日予測
+                    setLoading(true);
+                    try {
+                        const response = await axios.post(`${API_BASE_URL}/predict`, {
+                            date: formData.target_date,
+                            total_outpatient: formData.total_outpatient,
+                            intro_outpatient: formData.intro_outpatient,
+                            ER: formData.er,
+                            bed_count: formData.bed_count,
+                            public_holiday: formData.public_holiday
+                        });
+                        setResult(response.data);
+                    } catch (err) {
+                        setError(err.response?.data?.error || '予測に失敗しました');
+                    } finally {
+                        setLoading(false);
+                    }
+                } else if (tabValue === 1) {
+                    // 週間予測
+                    setWeekLoading(true);
+                    try {
+                        const response = await axios.post(`${API_BASE_URL}/predict_week`, {
+                            start_date: formData.start_date,
+                            total_outpatient: formData.total_outpatient,
+                            intro_outpatient: formData.intro_outpatient,
+                            ER: formData.er,
+                            bed_count: formData.bed_count,
+                            public_holiday: formData.public_holiday,
+                            public_holiday_previous_day: formData.public_holiday_previous_day
+                        });
+                        setWeekResult(response.data);
+                    } catch (err) {
+                        setError(err.response?.data?.error || '週間予測に失敗しました');
+                    } finally {
+                        setWeekLoading(false);
+                    }
+                }
+            };
+
+            const renderDayPrediction = () => (
+                <div className="result-content">
+                    {loading ? (
+                        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px'}}>
+                            <div className="loading-spinner"></div>
+                            <span style={{marginLeft: '12px'}}>予測中...</span>
+                        </div>
+                    ) : result ? (
+                        <div>
+                            <div className="result-card">
+                                <div className="result-value">{Math.round(result.prediction)}</div>
+                                <div className="result-label">予測入院患者数 (人)</div>
+
+                                <div className="result-details">
+                                    <div className="result-detail">
+                                        <span>予測日:</span>
+                                        <span>{formatDate(result.date || result.target_date)}</span>
+                                    </div>
+                                    <div className="result-detail">
+                                        <span>曜日:</span>
+                                        <span>{result.day || result.day_name || getDayName(result.date || result.target_date)}</span>
+                                    </div>
+                                    {result.season && (
+                                        <div className="result-detail">
+                                            <span>季節:</span>
+                                            <span>{result.season === 'spring' ? '春' : result.season === 'summer' ? '夏' : result.season === 'autumn' ? '秋' : '冬'}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {result.features && (
+                                <div style={{textAlign: 'left', marginTop: '20px'}}>
+                                    <h4 style={{marginBottom: '12px', fontSize: '1rem'}}>予測に使用した情報:</h4>
+                                    <div style={{display: 'grid', gap: '8px'}}>
+                                        <div style={{padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                            前日の総外来患者数: {result.features.total_outpatient}人
+                                        </div>
+                                        <div style={{padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                            前日の紹介外来患者数: {result.features.intro_outpatient}人
+                                        </div>
+                                        <div style={{padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                            前日の救急患者数: {result.features.ER}人
+                                        </div>
+                                        <div style={{padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px'}}>
+                                            現在の病床数: {result.features.bed_count}床
+                                        </div>
+                                        {result.features.public_holiday && (
+                                            <div style={{padding: '8px', backgroundColor: '#fff8e1', borderRadius: '4px'}}>
+                                                祝日です
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{color: '#666', fontStyle: 'italic'}}>
+                            予測を実行してください
+                        </div>
+                    )}
+                </div>
+            );
+
+            const renderWeekPrediction = () => (
+                <div className="result-content">
+                    {weekLoading ? (
+                        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px'}}>
+                            <div className="loading-spinner"></div>
+                            <span style={{marginLeft: '12px'}}>週間予測中...</span>
+                        </div>
+                    ) : weekResult ? (
+                        <div>
+                            {weekResult.start_date && (
+                                <div style={{textAlign: 'center', marginBottom: '20px'}}>
+                                    <span className="chip outlined">
+                                        <span className="material-icons" style={{fontSize: '16px', marginRight: '4px'}}>event</span>
+                                        開始日: {formatDate(weekResult.start_date)}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* チャート表示 */}
+                            {weekResult.predictions && weekResult.predictions.length > 0 && window.Chart && (
+                                <div className="chart-container">
+                                    <canvas id="weekChart"></canvas>
+                                </div>
+                            )}
+
+                            {/* テーブル表示 */}
+                            {weekResult.predictions && weekResult.predictions.length > 0 && (
+                                <table className="week-prediction-table">
+                                    <thead>
+                                        <tr>
+                                            <th>日付</th>
+                                            <th>曜日</th>
+                                            <th className="number">外来患者数</th>
+                                            <th className="number">予測入院患者数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {weekResult.predictions.map((pred, index) => {
+                                            const isHoliday = pred.features && pred.features.public_holiday;
+                                            const maxPred = Math.max(...weekResult.predictions.map(p => Math.round(p.prediction || 0)));
+                                            const minPred = Math.min(...weekResult.predictions.map(p => Math.round(p.prediction || 0)));
+                                            const currentPred = Math.round(pred.prediction || 0);
+
+                                            return (
+                                                <tr key={index} className={isHoliday ? 'holiday' : ''}>
+                                                    <td>{formatDate(pred.date)}</td>
+                                                    <td>
+                                                        {pred.day_label || getDayName(pred.date)}
+                                                        {isHoliday && ' (祝)'}
+                                                    </td>
+                                                    <td className="number">
+                                                        {pred.features ? pred.features.total_outpatient : formData.total_outpatient}
+                                                    </td>
+                                                    <td className="number" style={{fontWeight: 'bold', color: '#1976d2'}}>
+                                                        <span className="material-icons" style={{fontSize: '16px', verticalAlign: 'middle', marginRight: '4px'}}>bed</span>
+                                                        {currentPred}人
+                                                        {currentPred === maxPred && (
+                                                            <span className="badge max">最多</span>
+                                                        )}
+                                                        {currentPred === minPred && weekResult.predictions.length > 1 && currentPred !== maxPred && (
+                                                            <span className="badge min">最少</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+
+                            <div style={{marginTop: '16px', fontSize: '0.875rem', color: '#666'}}>
+                                ※ 前日の外来患者数や曜日などの条件に基づいた予測です。土日祝日は自動的に外来患者数を調整しています。
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{color: '#666', fontStyle: 'italic'}}>
+                            週間予測を実行してください
+                        </div>
+                    )}
+                </div>
+            );
+
+            // チャート描画
+            useEffect(() => {
+                if (weekResult && weekResult.predictions && window.Chart && tabValue === 1) {
+                    const canvas = document.getElementById('weekChart');
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+
+                        // 既存のチャートを破棄
+                        if (window.weekChart) {
+                            window.weekChart.destroy();
+                        }
+
+                        window.weekChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: weekResult.predictions.map(p => {
+                                    const dateParts = p.date.split('-');
+                                    const dayName = p.day_label || getDayName(p.date);
+                                    return `${dateParts[1]}/${dateParts[2]} (${dayName.charAt(0)})`;
+                                }),
+                                datasets: [{
+                                    label: '入院患者数予測',
+                                    data: weekResult.predictions.map(p => Math.round(p.prediction || 0)),
+                                    borderColor: '#1976d2',
+                                    backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                                    tension: 0.3,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'top'
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return `入院患者数: ${context.raw}人`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: false,
+                                        ticks: {
+                                            callback: function(value) {
+                                                return value + '人';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }, [weekResult, tabValue]);
+
+            const renderDashboard = () => (
+                <div className="paper">
+                    <h3>データ分析とダッシュボード</h3>
+                    <div style={{marginTop: '20px'}}>
+                        <div className="alert info">
+                            このセクションでは、予測モデルの性能や患者データの傾向を可視化します。
+                            現在はデモ版のため、サンプルデータを表示しています。
+                        </div>
+
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px'}}>
+                            <div style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', textAlign: 'center'}}>
+                                <h4 style={{color: '#1976d2', fontSize: '2rem', margin: '0'}}>22.5</h4>
+                                <p style={{margin: '8px 0 0 0', color: '#666'}}>平均入院患者数</p>
+                            </div>
+
+                            <div style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', textAlign: 'center'}}>
+                                <h4 style={{color: '#2e7d32', fontSize: '2rem', margin: '0'}}>85.3%</h4>
+                                <p style={{margin: '8px 0 0 0', color: '#666'}}>予測精度</p>
+                            </div>
+
+                            <div style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px', textAlign: 'center'}}>
+                                <h4 style={{color: '#c62828', fontSize: '2rem', margin: '0'}}>35</h4>
+                                <p style={{margin: '8px 0 0 0', color: '#666'}}>最大入院患者数</p>
+                            </div>
+                        </div>
+
+                        <div style={{marginTop: '30px'}}>
+                            <h4 style={{marginBottom: '12px'}}>曜日別傾向</h4>
+                            <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', fontSize: '0.875rem'}}>
+                                {['月', '火', '水', '木', '金', '土', '日'].map((day, index) => {
+                                    const values = [28, 22, 21, 20, 22, 12, 10];
+                                    return (
+                                        <div key={day} style={{textAlign: 'center', padding: '12px', backgroundColor: '#e3f2fd', borderRadius: '4px'}}>
+                                            <div style={{fontWeight: 'bold'}}>{day}</div>
+                                            <div style={{color: '#1976d2', fontSize: '1.2rem', margin: '4px 0'}}>{values[index]}</div>
+                                            <div style={{fontSize: '0.75rem', color: '#666'}}>人</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div style={{marginTop: '20px', fontSize: '0.875rem', color: '#666'}}>
+                            ※ このデータは説明用のサンプルデータです。実際のデータに基づいた分析結果ではありません。
+                        </div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div>
+                    {/* アプリバー */}
+                    <div className="app-bar">
+                        <span className="material-icons">local_hospital</span>
+                        <h1>入院患者数予測システム</h1>
+                    </div>
+
+                    <div className="container">
+                        {/* ヘッダー */}
+                        <div className="header">
+                            <h2>入院患者数予測</h2>
+                            <p>患者情報を入力して、入院患者数を予測します。</p>
+
+                            {/* ヘルスステータス */}
+                            {healthStatus && (
+                                <div className={`health-status ${healthStatus.status !== 'healthy' ? 'error' : ''}`}>
+                                    {healthStatus.status === 'healthy' ?
+                                        `✅ APIサーバー接続OK (モデル: ${healthStatus.data.model_loaded ? '読み込み済み' : '未読み込み'})` :
+                                        `❌ ${healthStatus.message}`
+                                    }
+                                </div>
+                            )}
+
+                            {/* エラー表示 */}
+                            {error && (
+                                <div className="error-alert">
+                                    {error}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* タブ */}
+                        <div className="tabs">
+                            <button
+                                className={`tab ${tabValue === 0 ? 'active' : ''}`}
+                                onClick={() => setTabValue(0)}
+                            >
+                                翌日予測
+                            </button>
+                            <button
+                                className={`tab ${tabValue === 1 ? 'active' : ''}`}
+                                onClick={() => setTabValue(1)}
+                            >
+                                週間予測
+                            </button>
+                            <button
+                                className={`tab ${tabValue === 2 ? 'active' : ''}`}
+                                onClick={() => setTabValue(2)}
+                            >
+                                ダッシュボード
+                            </button>
+                        </div>
+
+                        {/* メインコンテンツ */}
+                        {tabValue === 2 ? (
+                            <div className="content-grid dashboard">
+                                {renderDashboard()}
+                            </div>
+                        ) : (
+                            <div className="content-grid">
+                                {/* フォーム */}
+                                <div className="paper">
+                                    <h3>患者情報入力</h3>
+
+                                    <div className="alert info">
+                                        {tabValue === 0 ?
+                                            '指定した日付の入院患者数を予測します。前日の外来患者数、救急患者数、現在の病床数から予測します。' :
+                                            '開始日から7日間の入院患者数予測を行います。曜日は自動で計算されます。土日祝日は外来患者数を自動調整します。'
+                                        }
+                                    </div>
+
+                                    <form onSubmit={handleSubmit}>
+                                        <div className="form-group full-width">
+                                            <label>{tabValue === 0 ? '予測日' : '予測開始日'}</label>
+                                            <input
+                                                type="date"
+                                                name={tabValue === 0 ? 'target_date' : 'start_date'}
+                                                value={tabValue === 0 ? formData.target_date : formData.start_date}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="form-grid">
+                                            <div className="form-group">
+                                                <div className="switch-group">
+                                                    <label className="switch">
+                                                        <input
+                                                            type="checkbox"
+                                                            name="public_holiday"
+                                                            checked={formData.public_holiday}
+                                                            onChange={handleChange}
+                                                        />
+                                                        <span className="slider"></span>
+                                                    </label>
+                                                    <span>祝日</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <div className="switch-group">
+                                                    <label className="switch">
+                                                        <input
+                                                            type="checkbox"
+                                                            name="public_holiday_previous_day"
+                                                            checked={formData.public_holiday_previous_day}
+                                                            onChange={handleChange}
+                                                        />
+                                                        <span className="slider"></span>
+                                                    </label>
+                                                    <span>前日が祝日</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="form-section">
+                                            <h4 style={{margin: '16px 0 12px 0', color: '#666', fontSize: '0.9rem'}}>前日の患者情報</h4>
+
+                                            <div className="form-grid">
+                                                <div className="form-group">
+                                                    <label>前日の総外来患者数</label>
+                                                    <input
+                                                        type="number"
+                                                        name="total_outpatient"
+                                                        value={formData.total_outpatient}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label>前日の紹介外来患者数</label>
+                                                    <input
+                                                        type="number"
+                                                        name="intro_outpatient"
+                                                        value={formData.intro_outpatient}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label>前日の救急患者数</label>
+                                                    <input
+                                                        type="number"
+                                                        name="er"
+                                                        value={formData.er}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label>現在の病床数</label>
+                                                    <input
+                                                        type="number"
+                                                        name="bed_count"
+                                                        value={formData.bed_count}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            className="btn"
+                                            disabled={tabValue === 0 ? loading : weekLoading}
+                                        >
+                                            {(tabValue === 0 ? loading : weekLoading) ? (
+                                                <div className="loading-spinner"></div>
+                                            ) : (
+                                                <>
+                                                    <span className="material-icons">
+                                                        {tabValue === 0 ? 'calendar_month' : 'date_range'}
+                                                    </span>
+                                                    {tabValue === 0 ? '翌日予測を実行' : '週間予測を実行'}
+                                                </>
+                                            )}
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* 結果表示 */}
+                                <div className="paper result-section">
+                                    <h3>{tabValue === 0 ? '翌日予測結果' : '週間予測結果'}</h3>
+                                    {tabValue === 0 ? renderDayPrediction() : renderWeekPrediction()}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

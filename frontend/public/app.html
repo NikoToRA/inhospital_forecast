@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>入院患者数予測システム</title>
+    <!-- Material-UI CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Axios for API calls -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            border-left: 4px solid #1976d2;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+        .health-status {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .health-ok {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .health-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // API設定
+        const API_BASE_URL = 'http://localhost:8000/api';
+
+        function App() {
+            const [formData, setFormData] = useState({
+                date: new Date().toISOString().split('T')[0],
+                total_outpatient: '',
+                intro_outpatient: '',
+                ER: '',
+                bed_count: '',
+                public_holiday: false
+            });
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [healthStatus, setHealthStatus] = useState(null);
+
+            // ヘルスチェック
+            useEffect(() => {
+                checkHealth();
+            }, []);
+
+            const checkHealth = async () => {
+                try {
+                    const response = await axios.get(`${API_BASE_URL}/health`);
+                    setHealthStatus({
+                        status: 'healthy',
+                        data: response.data
+                    });
+                } catch (err) {
+                    setHealthStatus({
+                        status: 'error',
+                        message: 'APIサーバーに接続できません'
+                    });
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                setResult(null);
+
+                try {
+                    const response = await axios.post(`${API_BASE_URL}/predict`, formData);
+                    setResult(response.data);
+                } catch (err) {
+                    setError(err.response?.data?.error || 'エラーが発生しました');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleChange = (e) => {
+                const { name, value, type, checked } = e.target;
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: type === 'checkbox' ? checked : value
+                }));
+            };
+
+            return (
+                <div className="container">
+                    <h1>入院患者数予測システム</h1>
+
+                    {/* ヘルスステータス */}
+                    {healthStatus && (
+                        <div className={`health-status ${healthStatus.status === 'healthy' ? 'health-ok' : 'health-error'}`}>
+                            {healthStatus.status === 'healthy' ?
+                                `✅ APIサーバー接続OK (モデル: ${healthStatus.data.model_loaded ? '読み込み済み' : '未読み込み'})` :
+                                `❌ ${healthStatus.message}`
+                            }
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group">
+                            <label>予測日</label>
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>外来患者総数</label>
+                            <input
+                                type="number"
+                                name="total_outpatient"
+                                value={formData.total_outpatient}
+                                onChange={handleChange}
+                                placeholder="例: 150"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>紹介外来患者数</label>
+                            <input
+                                type="number"
+                                name="intro_outpatient"
+                                value={formData.intro_outpatient}
+                                onChange={handleChange}
+                                placeholder="例: 30"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>救急患者数</label>
+                            <input
+                                type="number"
+                                name="ER"
+                                value={formData.ER}
+                                onChange={handleChange}
+                                placeholder="例: 25"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>病床数</label>
+                            <input
+                                type="number"
+                                name="bed_count"
+                                value={formData.bed_count}
+                                onChange={handleChange}
+                                placeholder="例: 200"
+                                required
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    name="public_holiday"
+                                    checked={formData.public_holiday}
+                                    onChange={handleChange}
+                                />
+                                祝日
+                            </label>
+                        </div>
+
+                        <button type="submit" disabled={loading}>
+                            {loading ? '予測中...' : '予測実行'}
+                        </button>
+
+                        <button type="button" onClick={checkHealth}>
+                            接続テスト
+                        </button>
+                    </form>
+
+                    {/* 結果表示 */}
+                    {result && (
+                        <div className="result">
+                            <h3>予測結果</h3>
+                            <p><strong>予測入院患者数:</strong> {Math.round(result.prediction)} 人</p>
+                            <p><strong>予測日:</strong> {result.date}</p>
+                            <p><strong>曜日:</strong> {result.day}</p>
+                        </div>
+                    )}
+
+                    {/* エラー表示 */}
+                    {error && (
+                        <div className="result error">
+                            <h3>エラー</h3>
+                            <p>{error}</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
