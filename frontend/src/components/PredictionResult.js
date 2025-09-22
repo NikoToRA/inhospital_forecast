@@ -26,7 +26,9 @@ const PredictionResult = ({ prediction, loading }) => {
     );
   }
 
-  const { prediction: predictedValue, features, target_date, day_of_week, day_name, season } = prediction;
+  const { prediction: predictedValue, features, date, day_name, season } = prediction;
+  const displayValue = Number(predictedValue).toFixed(1);
+  const target_date = date || prediction.target_date;
   
   // 予測値の調整は不要になりました
   // const adjustedPrediction = Math.round(predictedValue * 8.22 * 10) / 10;
@@ -79,7 +81,7 @@ const PredictionResult = ({ prediction, loading }) => {
       }}>
         <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <BedIcon fontSize="large" sx={{ mr: 1 }} /> 
-          {predictedValue} 人
+          {displayValue} 人
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
           入院患者数予測
@@ -138,7 +140,7 @@ const PredictionResult = ({ prediction, loading }) => {
         
         <Paper variant="outlined" sx={{ p: 1 }}>
           <Typography variant="body2">
-            <strong>前日の救急患者数:</strong> {features.ER} 人
+            <strong>前日の救急患者数:</strong> {features.ER || features.er || 0} 人
           </Typography>
         </Paper>
         

@@ -1,20 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   TextField,
-  FormControl,
   Button,
   Grid,
-  FormControlLabel,
-  Switch,
   Typography,
   Box,
-  Divider,
-  Chip,
   Alert,
-  CircularProgress,
-  InputLabel,
-  Select,
-  MenuItem
+  CircularProgress
 } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import DateRangeIcon from '@mui/icons-material/DateRange';
@@ -28,62 +20,39 @@ const getTodayFormatted = () => {
   return `${year}-${month}-${day}`;
 };
 
-const PredictionForm = ({ onSubmit, loading, scenarios, onScenarioSelect, mode = "day" }) => {
-  const [formData, setFormData] = useState({
-    target_date: getTodayFormatted(),
-    start_date: getTodayFormatted(),
-    public_holiday: false,
-    public_holiday_previous_day: false,
-    total_outpatient: 500,
-    intro_outpatient: 20,
-    er: 15,
-    bed_count: 280
-  });
+const PredictionForm = ({ onSubmit, loading, mode = "day", formData, onChange }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
     // 数値フィールドの場合は整数に変換
     if (type === 'number') {
-      setFormData({
-        ...formData,
-        [name]: parseInt(value, 10) || 0
-      });
+      onChange({ [name]: parseInt(value, 10) || 0 });
     } else if (type === 'checkbox') {
-      setFormData({
-        ...formData,
-        [name]: checked
-      });
+      onChange({ [name]: checked });
     } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
+      onChange({ [name]: value });
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // モードに応じたデータを送信
+    // モードに応じたデータを送信（祝日は自動判定）
     if (mode === 'day') {
       onSubmit({
-        target_date: formData.target_date,
-        public_holiday: formData.public_holiday,
-        public_holiday_previous_day: formData.public_holiday_previous_day,
+        date: formData.target_date,
         total_outpatient: formData.total_outpatient,
         intro_outpatient: formData.intro_outpatient,
-        er: formData.er,
+        ER: formData.er,
         bed_count: formData.bed_count
       });
     } else {
       onSubmit({
         start_date: formData.start_date,
-        public_holiday: formData.public_holiday,
-        public_holiday_previous_day: formData.public_holiday_previous_day,
         total_outpatient: formData.total_outpatient,
         intro_outpatient: formData.intro_outpatient,
-        er: formData.er,
+        ER: formData.er,
         bed_count: formData.bed_count
       });
     }
@@ -99,7 +68,7 @@ const PredictionForm = ({ onSubmit, loading, scenarios, onScenarioSelect, mode =
       ) : (
         <Alert severity="info" sx={{ mb: 2 }}>
           指定した日付の入院患者数を予測します。
-          前日の外来患者数、救急患者数、現在の病床数から予測します。
+          前日の外来患者数、救急患者数、現在の病床数などの病院情報から予測します。
         </Alert>
       )}
       
@@ -119,35 +88,10 @@ const PredictionForm = ({ onSubmit, loading, scenarios, onScenarioSelect, mode =
           />
         </Grid>
         
-        <Grid item xs={12} sm={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.public_holiday}
-                onChange={handleChange}
-                name="public_holiday"
-              />
-            }
-            label="祝日"
-          />
-        </Grid>
-        
-        <Grid item xs={12} sm={6}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.public_holiday_previous_day}
-                onChange={handleChange}
-                name="public_holiday_previous_day"
-              />
-            }
-            label="前日が祝日"
-          />
-        </Grid>
         
         <Grid item xs={12}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-            前日の患者情報
+            前日の病院状況
           </Typography>
         </Grid>
         
@@ -222,31 +166,7 @@ const PredictionForm = ({ onSubmit, loading, scenarios, onScenarioSelect, mode =
         </Grid>
       </Grid>
       
-      {scenarios && scenarios.length > 0 && (
-        <Box sx={{ mt: 4 }}>
-          <Divider>
-            <Chip label="シナリオ選択" />
-          </Divider>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-            あらかじめ用意されたシナリオから選択することもできます。
-          </Typography>
-          <Grid container spacing={1}>
-            {scenarios.map((scenario, index) => (
-              <Grid item xs={12} key={index}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  onClick={() => onScenarioSelect(scenario)}
-                  sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
-                >
-                  {scenario.name}
-                </Button>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+      {/* シナリオ選択は不要のため削除 */}
     </form>
   );
 };

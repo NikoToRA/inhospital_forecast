@@ -58,7 +58,7 @@ const WeekPrediction = ({ weekPrediction, loading }) => {
     datasets: [
       {
         label: '入院患者数予測',
-        data: predictions.map(p => p.prediction ? Number(p.prediction) : 0),
+        data: predictions.map(p => p.prediction ? Number(Number(p.prediction).toFixed(1)) : 0),
         borderColor: theme.palette.primary.main,
         backgroundColor: theme.palette.primary.light,
         tension: 0.3,
@@ -148,7 +148,7 @@ const WeekPrediction = ({ weekPrediction, loading }) => {
                 </TableCell>
                 <TableCell align="right">{prediction.features ? prediction.features.total_outpatient : 0}</TableCell>
                 {!isMobile && <TableCell align="right">{prediction.features ? prediction.features.intro_outpatient : 0}</TableCell>}
-                {!isMobile && <TableCell align="right">{prediction.features ? prediction.features.ER : 0}</TableCell>}
+                {!isMobile && <TableCell align="right">{prediction.features ? (prediction.features.ER || prediction.features.er || 0) : 0}</TableCell>}
                 <TableCell align="right" sx={{ 
                   fontWeight: 'bold', 
                   color: isMaxPrediction(prediction.prediction) ? theme.palette.error.main : 
@@ -159,7 +159,7 @@ const WeekPrediction = ({ weekPrediction, loading }) => {
                   justifyContent: 'flex-end'
                 }}>
                   <BedIcon fontSize="small" sx={{ mr: 0.5 }} />
-                  {prediction.prediction}人
+                  {Number(prediction.prediction).toFixed(1)}人
                   {isMaxPrediction(prediction.prediction) && 
                     <Chip size="small" label="最多" color="error" sx={{ ml: 1, height: 20 }} />}
                   {isMinPrediction(prediction.prediction) && 
