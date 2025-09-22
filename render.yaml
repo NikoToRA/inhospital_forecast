@@ -23,3 +23,14 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
+  - type: static
+    name: inhospital-forecast-ui
+    buildCommand: |
+      cd frontend
+      npm install
+      npm run build
+    staticPublishPath: frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        # 初回デプロイ後に、BackendのURLに変更してください（例: https://inhospital-forecast-api.onrender.com/api）
+        value: https://inhospital-forecast.onrender.com/api

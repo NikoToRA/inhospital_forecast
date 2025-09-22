@@ -81,7 +81,7 @@ const MonthCalendar = ({ title, year, month, predictionsMap, minValue, maxValue 
           {isHoliday && <Chip size="small" label="祝" color="error" variant="outlined" />}
         </Box>
         {value && (
-          <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 600, color: theme.palette.text.primary }}>
+          <Typography variant="caption" sx={{ mt: 0.5, fontWeight: 500, opacity: 0.85, color: theme.palette.text.primary }}>
             {value}人
           </Typography>
         )}
