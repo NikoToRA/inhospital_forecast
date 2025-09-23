@@ -28,7 +28,7 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
-  - type: static
+  - type: static_site
     name: inhospital-forecast-ui
     buildCommand: |
       cd frontend
