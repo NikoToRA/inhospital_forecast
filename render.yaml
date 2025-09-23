@@ -9,14 +9,19 @@ services:
       pip install -r requirements.txt
       # Copy model file from models directory
       cp models/fixed_rf_model.joblib ./fixed_rf_model.joblib
+      # Copy prophet model if present (optional)
+      if [ -f models/prophet_model.joblib ]; then cp models/prophet_model.joblib ./prophet_model.joblib; fi
       cp ../ultimate_pickup_data.csv ./ultimate_pickup_data.csv
     startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app --timeout 600"
     healthCheckPath: "/api/health"
     envVars:
       - key: FLASK_ENV
         value: production
-      - key: MODEL_PATH
+      # Match backend/app.py expectations explicitly
+      - key: RF_MODEL_PATH
         value: "./fixed_rf_model.joblib"
+      - key: PROPHET_MODEL_PATH
+        value: "./prophet_model.joblib"
       - key: CORS_ORIGINS
         value: "*"
       - key: SUPABASE_URL
@@ -32,5 +37,6 @@ services:
     staticPublishPath: frontend/build
     envVars:
       - key: REACT_APP_API_URL
-        # 初回デプロイ後に、BackendのURLに変更してください（例: https://inhospital-forecast-api.onrender.com/api）
-        value: https://inhospital-forecast.onrender.com/api
+        # 初回デプロイ後に、Backendの実URLに合わせて必要なら更新
+        # 既定はBackendサービス名からの推定URL
+        value: https://inhospital-forecast-api.onrender.com/api
