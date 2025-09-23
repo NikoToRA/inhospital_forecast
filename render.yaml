@@ -1,18 +1,19 @@
 services:
   - type: web
     name: inhospital-forecast-api
-    env: python
+    runtime: python
     region: oregon
-    plan: free
+    plan: starter
+    rootDir: backend
     buildCommand: |
-      cd backend
       pip install -r requirements.txt
       # Copy model file from models directory
       cp models/fixed_rf_model.joblib ./fixed_rf_model.joblib
       # Copy prophet model if present (optional)
       if [ -f models/prophet_model.joblib ]; then cp models/prophet_model.joblib ./prophet_model.joblib; fi
+      # Copy sample data
       cp ../ultimate_pickup_data.csv ./ultimate_pickup_data.csv
-    startCommand: "cd backend && gunicorn --bind 0.0.0.0:$PORT app:app --timeout 600"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT app:app --timeout 600"
     healthCheckPath: "/api/health"
     envVars:
       - key: FLASK_ENV
@@ -28,15 +29,15 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
-  - type: static_site
+  - type: web
     name: inhospital-forecast-ui
+    runtime: static
+    rootDir: frontend
     buildCommand: |
-      cd frontend
       npm install
       npm run build
-    staticPublishPath: frontend/build
+    staticPublishPath: build
     envVars:
       - key: REACT_APP_API_URL
         # 初回デプロイ後に、Backendの実URLに合わせて必要なら更新
-        # 既定はBackendサービス名からの推定URL
         value: https://inhospital-forecast-api.onrender.com/api
