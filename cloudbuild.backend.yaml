@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '--file=backend/Dockerfile'
+      - '--tag=$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'
+      - .
+
+images:
+  - '$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'
+
