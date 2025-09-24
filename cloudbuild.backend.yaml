@@ -1,11 +1,13 @@
+substitutions:
+  _LOCATION: "asia-northeast1"
+
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
       - '--file=backend/Dockerfile'
-      - '--tag=$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'
+      - '--tag=$_LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'
       - .
 
 images:
-  - '$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'
-
+  - '$_LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-api:latest'

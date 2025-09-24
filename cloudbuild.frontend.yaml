@@ -1,16 +1,16 @@
 substitutions:
   _API_URL: ""
+  _LOCATION: "asia-northeast1"
 
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
       - '--file=frontend/Dockerfile'
-      - '--tag=$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-ui:latest'
+      - '--tag=$_LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-ui:latest'
       - '--build-arg'
       - 'REACT_APP_API_URL=${_API_URL}'
       - .
 
 images:
-  - '$LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-ui:latest'
-
+  - '$_LOCATION-docker.pkg.dev/$PROJECT_ID/inhospital/inhospital-ui:latest'
