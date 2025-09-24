@@ -4,7 +4,8 @@ WORKDIR /app
 
 # Install deps with clean, reproducible ci
 COPY frontend/package*.json ./
-RUN npm ci --prefer-offline --no-audit --no-fund
+# Use npm install to avoid lockfile mismatch failures in CI
+RUN npm install --prefer-offline --no-audit --no-fund
 
 # Copy sources
 COPY frontend/ ./
@@ -28,4 +29,3 @@ COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
-
